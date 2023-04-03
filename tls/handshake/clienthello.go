@@ -1,7 +1,9 @@
 package handshake
 
 import (
+	"bytes"
 	"crypto/rand"
+	"encoding/binary"
 )
 
 // ref. https://datatracker.ietf.org/doc/html/rfc8446#section-4.1.2
@@ -56,9 +58,15 @@ func (ch ClientHello) Encode() []byte {
 	encoded = append(encoded, ch.random[:]...)
 
 	// legacySessionId
+	encoded = append(encoded, byte(len(ch.legacySessionId)))
 	encoded = append(encoded, ch.legacySessionId[:]...)
 
 	// cipherSuites
+	cipherSuitesLenBytes := make([]byte, 2)
+	cipherSuitesLen := uint16(len(ch.cipherSuites))
+	binary.BigEndian.PutUint16(cipherSuitesLenBytes, cipherSuitesLen)
+	encoded = append(encoded, cipherSuitesLenBytes...)
+
 	for _, v := range ch.cipherSuites {
 		encoded = append(encoded, v.Encode()...)
 	}
@@ -72,4 +80,44 @@ func (ch ClientHello) Encode() []byte {
 	}
 
 	return encoded
+}
+
+// TODO implement decode and check decode using other implementation sample message
+func DecodeClientHello(data []byte) ClientHello {
+
+	// legacyVersion
+	data, legacyVersion := DecodeProtocolVersion(data)
+
+	// random
+	var random [32]byte
+	copy(random[:], data[:32])
+	data = data[32:]
+
+	// legacySessionId
+	var legacySessionIdLength byte
+	legacySessionIdLength = data[0]
+	data = data[1:]
+	var legacySessionId []byte
+	legacySessionId = data[:legacySessionIdLength]
+	data = data[legacySessionIdLength:]
+
+	// cipherSuites
+	cipherSuitesLengthByte := data[:2]
+	var cipherSuitesLength uint16
+	binary.Read(bytes.NewReader(cipherSuitesLengthByte), binary.BigEndian, &cipherSuitesLength)
+	data = data[2:]
+
+	var cipherSuites []CipherSuite
+	for i := 0; i < int(cipherSuitesLength); i++ {
+		var cipherSuite CipherSuite
+		data, cipherSuite = DecodeCipherSuite(data)
+		cipherSuites = append(cipherSuites, cipherSuite)
+	}
+
+	return ClientHello{
+		legacyVersion:   legacyVersion,
+		random:          random,
+		legacySessionId: legacySessionId,
+		cipherSuites:    cipherSuites,
+	}
 }

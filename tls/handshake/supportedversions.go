@@ -12,20 +12,21 @@ package handshake
 // 	};
 // } SupportedVersions;
 
-type SupportedVersions struct {
-	isClient        bool
+type SupportedVersionsExtention struct {
+	isClientHello   bool
 	versions        []ProtocolVersion
 	selectedVersion ProtocolVersion
 }
 
-func NewSupportedVersionsForClient(versions []ProtocolVersion) SupportedVersions {
-	return SupportedVersions{isClient: true, versions: versions}
+func NewSupportedVersionsForClient(versions []ProtocolVersion) SupportedVersionsExtention {
+	return SupportedVersionsExtention{isClientHello: true, versions: versions}
 }
 
-func (s SupportedVersions) Encode() []byte {
+func (s SupportedVersionsExtention) Encode() []byte {
 	encoded := []byte{}
+	encoded = append(encoded, SupportedVersions.Encode()...)
 
-	if s.isClient {
+	if s.isClientHello {
 		// length
 		encoded = append(encoded, byte(len(s.versions)))
 		for _, v := range s.versions {

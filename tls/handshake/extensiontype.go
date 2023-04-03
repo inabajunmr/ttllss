@@ -32,28 +32,28 @@ type ExtensionType uint16
 //		(65535)
 //	} ExtensionType;
 const (
-	serverName                          ExtensionType = 0
-	maxFragmentLength                                 = 1
-	statusRequest                                     = 5
-	supportedGroups                                   = 10
-	signatureAlgorithms                               = 13
-	useSRTP                                           = 14
-	heartbeat                                         = 15
-	applicationLayerProtocolNegotiation               = 16
-	signedCertificateTimestamp                        = 18
-	clientCertificateType                             = 19
-	serverCertificateType                             = 20
-	padding                                           = 21
-	preSharedKey                                      = 41
-	earlyData                                         = 42
-	supportedVersions                                 = 43
-	cookie                                            = 44
-	pskKeyExchangeModes                               = 45
-	certificateAuthorities                            = 47
-	oidFilters                                        = 48
-	postHandshakeAuth                                 = 49
-	signatureAlgorithmsCert                           = 50
-	keyShare                                          = 51
+	ServerName                          ExtensionType = 0
+	MaxFragmentLength                   ExtensionType = 1
+	StatusRequest                       ExtensionType = 5
+	SupportedGroups                     ExtensionType = 10
+	SignatureAlgorithms                 ExtensionType = 13
+	UseSRTP                             ExtensionType = 14
+	Heartbeat                           ExtensionType = 15
+	ApplicationLayerProtocolNegotiation ExtensionType = 16
+	SignedCertificateTimestamp          ExtensionType = 18
+	ClientCertificateType               ExtensionType = 19
+	ServerCertificateType               ExtensionType = 20
+	Padding                             ExtensionType = 21
+	PreSharedKey                        ExtensionType = 41
+	EarlyData                           ExtensionType = 42
+	SupportedVersions                   ExtensionType = 43
+	Cookie                              ExtensionType = 44
+	PSKKeyExchangeModes                 ExtensionType = 45
+	CertificateAuthorities              ExtensionType = 47
+	OIDFilters                          ExtensionType = 48
+	PostHandshakeAuth                   ExtensionType = 49
+	SignatureAlgorithmsCert             ExtensionType = 50
+	KeyShare                            ExtensionType = 51
 )
 
 func (e ExtensionType) Encode() []byte {
