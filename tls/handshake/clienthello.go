@@ -72,6 +72,7 @@ func (ch ClientHello) Encode() []byte {
 	}
 
 	// legacyCompressionMethods
+	encoded = append(encoded, byte(len(ch.legacyCompressionMethods)))
 	encoded = append(encoded, ch.legacyCompressionMethods[:]...)
 
 	// extensions
@@ -114,10 +115,20 @@ func DecodeClientHello(data []byte) ClientHello {
 		cipherSuites = append(cipherSuites, cipherSuite)
 	}
 
+	// legacyCompressionMethods
+	legacyCompressionMethodsLength := data[0]
+	data = data[1:]
+	var legacyCompressionMethods []byte
+	legacyCompressionMethods = data[:legacyCompressionMethodsLength]
+	data = data[legacyCompressionMethodsLength:]
+
+	// TODO extensions
+
 	return ClientHello{
-		legacyVersion:   legacyVersion,
-		random:          random,
-		legacySessionId: legacySessionId,
-		cipherSuites:    cipherSuites,
+		legacyVersion:            legacyVersion,
+		random:                   random,
+		legacySessionId:          legacySessionId,
+		cipherSuites:             cipherSuites,
+		legacyCompressionMethods: legacyCompressionMethods,
 	}
 }

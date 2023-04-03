@@ -32,6 +32,10 @@ func TestEncodeAndDecode(t *testing.T) {
 		t.Fatalf("legacySessionId original:%x decoded:%x", ch.cipherSuites, decoded.cipherSuites)
 	}
 
+	if !reflect.DeepEqual(ch.legacyCompressionMethods, decoded.legacyCompressionMethods) {
+		t.Fatalf("legacyCompressionMethods original:%x decoded:%x", ch.legacyCompressionMethods, decoded.legacyCompressionMethods)
+	}
+
 	// t.Fatalf("%v\n%v", ch, decoded)
 
 }
