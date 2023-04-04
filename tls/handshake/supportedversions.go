@@ -32,9 +32,29 @@ func (s SupportedVersionsExtention) Encode() []byte {
 		for _, v := range s.versions {
 			encoded = append(encoded, v.Encode()...)
 		}
+		return encoded
 	} else {
-		encoded = append(encoded, s.selectedVersion.Encode()...)
+		return append(encoded, s.selectedVersion.Encode()...)
 	}
+}
 
-	return encoded
+func DecodeSupportedVersion(data []byte, isClientHello bool) ([]byte, SupportedVersionsExtention) {
+
+	// type is already decoded...
+
+	if isClientHello {
+		length := data[0]
+		data = data[1:]
+		var result []ProtocolVersion
+		for i := 0; i < int(length); i++ {
+			var version ProtocolVersion
+			data, version = DecodeProtocolVersion(data)
+			result = append(result, version)
+		}
+		return data, SupportedVersionsExtention{isClientHello: true, versions: result}
+	} else {
+		var version ProtocolVersion
+		data, version = DecodeProtocolVersion(data)
+		return data, SupportedVersionsExtention{isClientHello: false, selectedVersion: version}
+	}
 }

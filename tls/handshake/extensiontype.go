@@ -1,6 +1,9 @@
 package handshake
 
-import "encoding/binary"
+import (
+	"bytes"
+	"encoding/binary"
+)
 
 type ExtensionType uint16
 
@@ -60,4 +63,12 @@ func (e ExtensionType) Encode() []byte {
 	bytes := make([]byte, 2)
 	binary.BigEndian.PutUint16(bytes, uint16(e))
 	return bytes
+}
+
+func DecodeExtensionType(data []byte) ([]byte, ExtensionType) {
+	extensionTypeByte := data[:2]
+	var extensionType uint16
+	binary.Read(bytes.NewReader(extensionTypeByte), binary.BigEndian, &extensionType)
+	return data[2:], ExtensionType(extensionType)
+
 }

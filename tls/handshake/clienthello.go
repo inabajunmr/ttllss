@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/rand"
 	"encoding/binary"
+	"fmt"
 )
 
 // ref. https://datatracker.ietf.org/doc/html/rfc8446#section-4.1.2
@@ -76,6 +77,11 @@ func (ch ClientHello) Encode() []byte {
 	encoded = append(encoded, ch.legacyCompressionMethods[:]...)
 
 	// extensions
+	extensionsLenBytes := make([]byte, 2)
+	extensionsLen := uint16(len(ch.extensions))
+	binary.BigEndian.PutUint16(extensionsLenBytes, extensionsLen)
+	encoded = append(encoded, extensionsLenBytes...)
+
 	for _, v := range ch.extensions {
 		encoded = append(encoded, v.Encode()...)
 	}
@@ -88,41 +94,50 @@ func DecodeClientHello(data []byte) ClientHello {
 
 	// legacyVersion
 	data, legacyVersion := DecodeProtocolVersion(data)
+	fmt.Printf("legacyVersion:%x\n", legacyVersion)
+	fmt.Printf("remaining : %x\n", data)
 
 	// random
 	var random [32]byte
 	copy(random[:], data[:32])
 	data = data[32:]
+	fmt.Printf("random:%x\n", random)
+	fmt.Printf("remaining : %x\n", data)
 
 	// legacySessionId
-	var legacySessionIdLength byte
-	legacySessionIdLength = data[0]
+	legacySessionIdLength := data[0]
+	fmt.Printf("legacySessionIdLength:%x\n", legacySessionIdLength)
 	data = data[1:]
-	var legacySessionId []byte
-	legacySessionId = data[:legacySessionIdLength]
+	legacySessionId := data[:legacySessionIdLength]
+	fmt.Printf("legacySessionId:%x\n", legacySessionId) // TODO legacySessionIdLength は 20 なのになぜか 32 桁になる
 	data = data[legacySessionIdLength:]
+	fmt.Printf("remaining : %x\n", data)
 
 	// cipherSuites
 	cipherSuitesLengthByte := data[:2]
 	var cipherSuitesLength uint16
 	binary.Read(bytes.NewReader(cipherSuitesLengthByte), binary.BigEndian, &cipherSuitesLength)
 	data = data[2:]
+	fmt.Printf("chperSuitesLength : %x\n", cipherSuitesLength)
 
 	var cipherSuites []CipherSuite
-	for i := 0; i < int(cipherSuitesLength); i++ {
+	// cipher suite accounts for 2 bytes so cipherSuitesLength/2 = len(CihperSuites)
+	for i := 0; i < int(cipherSuitesLength/2); i++ {
 		var cipherSuite CipherSuite
 		data, cipherSuite = DecodeCipherSuite(data)
+		fmt.Printf("remaining : %x\n", data)
 		cipherSuites = append(cipherSuites, cipherSuite)
 	}
+	fmt.Printf("cipherSuites: %x\n", cipherSuites)
 
 	// legacyCompressionMethods
 	legacyCompressionMethodsLength := data[0]
 	data = data[1:]
-	var legacyCompressionMethods []byte
-	legacyCompressionMethods = data[:legacyCompressionMethodsLength]
+	legacyCompressionMethods := data[:legacyCompressionMethodsLength]
 	data = data[legacyCompressionMethodsLength:]
 
-	// TODO extensions
+	// extensions
+	_, extensions := DecodeExtensions(data, true)
 
 	return ClientHello{
 		legacyVersion:            legacyVersion,
@@ -130,5 +145,6 @@ func DecodeClientHello(data []byte) ClientHello {
 		legacySessionId:          legacySessionId,
 		cipherSuites:             cipherSuites,
 		legacyCompressionMethods: legacyCompressionMethods,
+		extensions:               extensions,
 	}
 }
