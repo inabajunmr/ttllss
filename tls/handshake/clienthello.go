@@ -64,7 +64,7 @@ func (ch ClientHello) Encode() []byte {
 
 	// cipherSuites
 	cipherSuitesLenBytes := make([]byte, 2)
-	cipherSuitesLen := uint16(len(ch.cipherSuites))
+	cipherSuitesLen := uint16(len(ch.cipherSuites) * 2) // * 2 because 1 cipher suite accounts for 2 bytes
 	binary.BigEndian.PutUint16(cipherSuitesLenBytes, cipherSuitesLen)
 	encoded = append(encoded, cipherSuitesLenBytes...)
 
@@ -91,7 +91,6 @@ func (ch ClientHello) Encode() []byte {
 
 // TODO implement decode and check decode using other implementation sample message
 func DecodeClientHello(data []byte) ClientHello {
-
 	// legacyVersion
 	data, legacyVersion := DecodeProtocolVersion(data)
 	fmt.Printf("legacyVersion:%x\n", legacyVersion)
@@ -109,7 +108,7 @@ func DecodeClientHello(data []byte) ClientHello {
 	fmt.Printf("legacySessionIdLength:%x\n", legacySessionIdLength)
 	data = data[1:]
 	legacySessionId := data[:legacySessionIdLength]
-	fmt.Printf("legacySessionId:%x\n", legacySessionId) // TODO legacySessionIdLength は 20 なのになぜか 32 桁になる
+	fmt.Printf("legacySessionId:%x\n", legacySessionId)
 	data = data[legacySessionIdLength:]
 	fmt.Printf("remaining : %x\n", data)
 

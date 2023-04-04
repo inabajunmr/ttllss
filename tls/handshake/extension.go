@@ -18,7 +18,7 @@ func DecodeExtensions(data []byte, isClient bool) ([]byte, []Extension) {
 	data = data[2:]
 
 	var extensions []Extension
-	for i := 0; i < int(length); i++ { // TODO これも length でループするんじゃなくて length 分読み込む、という理解が正しそう
+	for len(data) >= int(length) {
 		var extension Extension
 		data, extension = decodeExtension(data, isClient)
 		extensions = append(extensions, extension)
@@ -27,15 +27,21 @@ func DecodeExtensions(data []byte, isClient bool) ([]byte, []Extension) {
 	return data, extensions
 }
 
-func decodeExtension(bytes []byte, isClient bool) ([]byte, Extension) {
-	bytes, ExtensionType := DecodeExtensionType(bytes)
+func decodeExtension(data []byte, isClient bool) ([]byte, Extension) {
+	data, extensionType := DecodeExtensionType(data)
 
-	switch ExtensionType {
+	lengthBytes := data[:2]
+	var length uint16
+	binary.Read(bytes.NewReader(lengthBytes), binary.BigEndian, &length)
+	data = data[2:]
+
+	// TODO
+	switch extensionType {
 	case SupportedVersions:
 		{
-			return DecodeSupportedVersion(bytes, isClient)
+			return DecodeSupportedVersion(data, length, isClient)
 		}
 	}
 
-	return bytes, nil
+	return data, nil
 }

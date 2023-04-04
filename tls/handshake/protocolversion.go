@@ -17,10 +17,10 @@ func (p ProtocolVersion) Encode() []byte {
 
 func DecodeProtocolVersion(b []byte) ([]byte, ProtocolVersion) {
 	// legacyVersion
-	legacyVersionBytes := b[:2]
-	var legacyVersion uint16
-	binary.Read(bytes.NewReader(legacyVersionBytes), binary.BigEndian, &legacyVersion)
-	return b[2:], ProtocolVersion{legacyVersion}
+	versionBytes := b[:2]
+	var version uint16
+	binary.Read(bytes.NewReader(versionBytes), binary.BigEndian, &version)
+	return b[2:], ProtocolVersion{version}
 }
 
 func NewProtocolVersion(version uint16) ProtocolVersion {
