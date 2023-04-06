@@ -17,10 +17,13 @@ func DecodeExtensions(data []byte, isClient bool) ([]byte, []Extension) {
 	binary.Read(bytes.NewReader(lengthBytes), binary.BigEndian, &length)
 	data = data[2:]
 
+	extensionBytes := data[:length]
+	data = data[length:]
+
 	var extensions []Extension
-	for len(data) >= int(length) {
+	for len(extensionBytes) != 0 {
 		var extension Extension
-		data, extension = decodeExtension(data, isClient)
+		extensionBytes, extension = decodeExtension(extensionBytes, isClient)
 		extensions = append(extensions, extension)
 	}
 
@@ -38,9 +41,9 @@ func decodeExtension(data []byte, isClient bool) ([]byte, Extension) {
 	// TODO
 	switch extensionType {
 	case SupportedVersions:
-		{
-			return DecodeSupportedVersion(data, length, isClient)
-		}
+		return DecodeSupportedVersion(data, length, isClient)
+	case SupportedGroups:
+		return DecodeSupportedGroups(data, length)
 	}
 
 	return data, nil
