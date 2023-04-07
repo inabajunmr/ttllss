@@ -3,7 +3,6 @@ package handshake
 import (
 	"bytes"
 	"encoding/binary"
-	"fmt"
 )
 
 // ref. https://datatracker.ietf.org/doc/html/rfc8446#section-4.2
@@ -39,14 +38,17 @@ func decodeExtension(data []byte, isClient bool) ([]byte, Extension) {
 	binary.Read(bytes.NewReader(lengthBytes), binary.BigEndian, &length)
 	data = data[2:]
 
-	fmt.Printf("type: %v\n", extensionType)
+	extensionData := data[:length]
+	data = data[length:]
 
-	// TODO
 	switch extensionType {
 	case SupportedVersions:
-		return DecodeSupportedVersion(data, length, isClient)
+		return data, DecodeSupportedVersion(extensionData, isClient)
 	case SupportedGroups:
-		return DecodeSupportedGroups(data, length)
+		return data, DecodeSupportedGroups(extensionData)
+	case KeyShare:
+		// return KeyShareClientHelloDecode(extensionData)
+
 	}
 
 	return data, nil

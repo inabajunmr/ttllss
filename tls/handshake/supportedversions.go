@@ -48,7 +48,7 @@ func (s SupportedVersionsExtention) Encode() []byte {
 	}
 }
 
-func DecodeSupportedVersion(data []byte, extensionLength uint16, isClientHello bool) ([]byte, SupportedVersionsExtention) {
+func DecodeSupportedVersion(data []byte, isClientHello bool) SupportedVersionsExtention {
 
 	// type is already decoded...
 	if isClientHello {
@@ -56,15 +56,15 @@ func DecodeSupportedVersion(data []byte, extensionLength uint16, isClientHello b
 		data = data[1:]
 
 		var result []ProtocolVersion
-		for i := 0; i < int(extensionLength)-int(length); i++ {
+		for i := 0; i < len(data)-int(length); i++ {
 			var version ProtocolVersion
 			data, version = DecodeProtocolVersion(data)
 			result = append(result, version)
 		}
-		return data, SupportedVersionsExtention{isClientHello: true, versions: result}
+		return SupportedVersionsExtention{isClientHello: true, versions: result}
 	} else {
 		var version ProtocolVersion
-		data, version = DecodeProtocolVersion(data)
-		return data, SupportedVersionsExtention{isClientHello: false, selectedVersion: version}
+		_, version = DecodeProtocolVersion(data)
+		return SupportedVersionsExtention{isClientHello: false, selectedVersion: version}
 	}
 }

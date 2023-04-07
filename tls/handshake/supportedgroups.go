@@ -53,7 +53,7 @@ func (s SupportedGroupsExtention) Encode() []byte {
 	return encoded
 }
 
-func DecodeSupportedGroups(data []byte, extensionLength uint16) ([]byte, SupportedGroupsExtention) {
+func DecodeSupportedGroups(data []byte) SupportedGroupsExtention {
 
 	// type is already decoded...
 	lengthBytes := data[:2]
@@ -67,5 +67,5 @@ func DecodeSupportedGroups(data []byte, extensionLength uint16) ([]byte, Support
 		data, group = DecodeNamedGroup(data)
 		result = append(result, group)
 	}
-	return data, SupportedGroupsExtention{namedGroupList: result}
+	return SupportedGroupsExtention{namedGroupList: result}
 }
