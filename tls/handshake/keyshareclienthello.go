@@ -19,6 +19,8 @@ func (s KeyShareClientHello) Encode() []byte {
 		encodedShares = append(encodedShares, v.Encode()...)
 	}
 
+	// TODO type と length のエンコードは共通部分にまとめたい
+
 	var encoded []byte
 	// type
 	encoded = append(encoded, KeyShare.Encode()...)
@@ -35,6 +37,15 @@ func (s KeyShareClientHello) Encode() []byte {
 	return encoded
 }
 
-// func KeyShareClientHelloDecode(data []byte, extensionLength uint16) ([]byte, KeyShareClientHello) {
-// 	return nil, nil
-// }
+func KeyShareClientHelloDecode(data []byte) KeyShareClientHello {
+
+	var clientShares []KeyShareEntry
+
+	for len(data) != 0 {
+		var k KeyShareEntry
+		data, k = DecodeKeyShareEntry(data)
+		clientShares = append(clientShares, k)
+	}
+
+	return KeyShareClientHello{clientShares: clientShares}
+}

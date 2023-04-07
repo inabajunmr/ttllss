@@ -47,8 +47,9 @@ func decodeExtension(data []byte, isClient bool) ([]byte, Extension) {
 	case SupportedGroups:
 		return data, DecodeSupportedGroups(extensionData)
 	case KeyShare:
-		// return KeyShareClientHelloDecode(extensionData)
-
+		if isClient {
+			return data, KeyShareClientHelloDecode(extensionData)
+		}
 	}
 
 	return data, nil
