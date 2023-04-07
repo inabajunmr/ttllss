@@ -36,17 +36,22 @@ func NewSupportedGroupsExtention(namedGroupList []NamedGroup) SupportedGroupsExt
 }
 
 func (s SupportedGroupsExtention) Encode() []byte {
-	encoded := []byte{}
-	encoded = append(encoded, SupportedVersions.Encode()...)
 
-	// version number * 2 + 1(for 1 byte length field)
-	lengthBytes := make([]byte, 2)
-	extensionLength := uint16(len(s.namedGroupList)*4 + 1)
-	binary.BigEndian.PutUint16(lengthBytes, extensionLength)
-	encoded = append(encoded, lengthBytes...)
+	encoded := []byte{}
+	encoded = append(encoded, SupportedGroups.Encode()...)
+
+	// version number * 2 + 2(for 2 byte length field)
+	extensionLengthBytes := make([]byte, 2)
+	extensionLength := uint16(len(s.namedGroupList)*2 + 2)
+	binary.BigEndian.PutUint16(extensionLengthBytes, extensionLength)
+	encoded = append(encoded, extensionLengthBytes...)
 
 	// length
-	encoded = append(encoded, byte(len(s.namedGroupList)*4)) // 1 version uses 2 bytes
+	supportedGroupsLengthBytes := make([]byte, 2)
+	suportedGroupsLength := uint16(len(s.namedGroupList) * 2)
+	binary.BigEndian.PutUint16(supportedGroupsLengthBytes, suportedGroupsLength)
+	encoded = append(encoded, supportedGroupsLengthBytes...)
+
 	for _, v := range s.namedGroupList {
 		encoded = append(encoded, v.Encode()...)
 	}

@@ -10,7 +10,8 @@ func TestEncodeAndDecode(t *testing.T) {
 	supportedVersionsExtensions := NewSupportedVersionsForClient(
 		[]ProtocolVersion{NewProtocolVersion(0x0304)},
 	)
-	ch := NewClientHello(cipherSuites, []Extension{supportedVersionsExtensions})
+	supportedGroupsExtension := NewSupportedGroupsExtention([]NamedGroup{NewNamedGroup(0x001D), NewNamedGroup(0x0017)})
+	ch := NewClientHello(cipherSuites, []Extension{supportedVersionsExtensions, supportedGroupsExtension})
 
 	encoded := ch.Encode()
 	decoded := DecodeClientHello(encoded)

@@ -3,6 +3,7 @@ package handshake
 import (
 	"bytes"
 	"encoding/binary"
+	"fmt"
 )
 
 // ref. https://datatracker.ietf.org/doc/html/rfc8446#section-4.2
@@ -31,7 +32,10 @@ func DecodeExtensions(data []byte, isClient bool) ([]byte, []Extension) {
 }
 
 func decodeExtension(data []byte, isClient bool) ([]byte, Extension) {
+
+	fmt.Printf("1data: %x\n", data)
 	data, extensionType := DecodeExtensionType(data)
+	fmt.Printf("type: %x\n", extensionType)
 
 	lengthBytes := data[:2]
 	var length uint16
@@ -39,7 +43,10 @@ func decodeExtension(data []byte, isClient bool) ([]byte, Extension) {
 	data = data[2:]
 
 	extensionData := data[:length]
+	fmt.Printf("2ex data: %x\n", extensionData)
+	fmt.Printf("3data: %x\nlen: %x\n", data, length)
 	data = data[length:]
+	fmt.Printf("4data: %x\nlen: %x\n", data, length)
 
 	switch extensionType {
 	case SupportedVersions:
