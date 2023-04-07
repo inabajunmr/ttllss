@@ -52,11 +52,11 @@ func DecodeSupportedVersion(data []byte, isClientHello bool) SupportedVersionsEx
 
 	// type is already decoded...
 	if isClientHello {
-		length := data[0]
+		// length byte
 		data = data[1:]
 
 		var result []ProtocolVersion
-		for i := 0; i < len(data)-int(length); i++ {
+		for len(data) != 0 {
 			var version ProtocolVersion
 			data, version = DecodeProtocolVersion(data)
 			result = append(result, version)

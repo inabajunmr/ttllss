@@ -14,7 +14,7 @@ type KeyShareServerHello struct {
 
 func (s KeyShareServerHello) Encode() []byte {
 
-	encodedShare := s.Encode()
+	encodedShare := s.serverShare.Encode()
 
 	var encoded []byte
 	// type
