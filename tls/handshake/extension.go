@@ -49,6 +49,8 @@ func decodeExtension(data []byte, isClient bool) ([]byte, Extension) {
 	case KeyShare:
 		if isClient {
 			return data, KeyShareClientHelloDecode(extensionData)
+		} else {
+			return data, KeyShareServerHelloDecode(extensionData)
 		}
 	}
 
