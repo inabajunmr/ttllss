@@ -16,10 +16,10 @@ func main() {
 
 	cipherSuites := []handshake.CipherSuite{handshake.TLS_AES_128_GCM_SHA256}
 	supportedVersionsExtension := handshake.NewSupportedVersionsForClient(
-		[]handshake.ProtocolVersion{handshake.NewProtocolVersion(0x0304)},
+		[]handshake.ProtocolVersion{0x0304},
 	)
 
-	supportedGroupsExtension := handshake.NewSupportedGroupsExtention([]handshake.NamedGroup{handshake.NewNamedGroup(handshake.Secp256r1)})
+	supportedGroupsExtension := handshake.NewSupportedGroupsExtention([]handshake.NamedGroup{handshake.Secp256r1})
 
 	var clientShares []handshake.KeyShareEntry
 	curve := elliptic.P256()
@@ -29,7 +29,7 @@ func main() {
 	}
 	pubKey := privKey.PublicKey
 	keyShareBytes := elliptic.Marshal(curve, pubKey.X, pubKey.Y)
-	clientShares = append(clientShares, handshake.NewKeyShareEntry(handshake.NewNamedGroup(handshake.Secp256r1), keyShareBytes))
+	clientShares = append(clientShares, handshake.NewKeyShareEntry(handshake.Secp256r1, keyShareBytes))
 	keyShareExtension := handshake.NewKeyShareClientHello(clientShares)
 
 	// TODO required extensions for ClientHello
