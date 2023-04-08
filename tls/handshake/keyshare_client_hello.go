@@ -12,6 +12,10 @@ type KeyShareClientHello struct {
 	clientShares []KeyShareEntry
 }
 
+func NewKeyShareClientHello(clientShare []KeyShareEntry) KeyShareClientHello {
+	return KeyShareClientHello{clientShares: clientShare}
+}
+
 func (s KeyShareClientHello) Encode() []byte {
 
 	var encodedShares []byte

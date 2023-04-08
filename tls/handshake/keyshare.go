@@ -16,6 +16,10 @@ type KeyShareEntry struct {
 	keyExchange []byte
 }
 
+func NewKeyShareEntry(group NamedGroup, keyExchange []byte) KeyShareEntry {
+	return KeyShareEntry{group: group, keyExchange: keyExchange}
+}
+
 func (p KeyShareEntry) Encode() []byte {
 	var encoded []byte
 

@@ -1,6 +1,9 @@
 package main
 
 import (
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
 	"fmt"
 	"log"
 	"net"
@@ -16,9 +19,21 @@ func main() {
 		[]handshake.ProtocolVersion{handshake.NewProtocolVersion(0x0304)},
 	)
 
-	supportedGroupsExtension := handshake.NewSupportedGroupsExtention([]handshake.NamedGroup{handshake.NewNamedGroup(0x001D)})
+	supportedGroupsExtension := handshake.NewSupportedGroupsExtention([]handshake.NamedGroup{handshake.NewNamedGroup(handshake.Secp256r1)})
+
+	var clientShares []handshake.KeyShareEntry
+	curve := elliptic.P256()
+	privKey, err := ecdsa.GenerateKey(curve, rand.Reader)
+	if err != nil {
+		panic(err)
+	}
+	pubKey := privKey.PublicKey
+	keyShareBytes := elliptic.Marshal(curve, pubKey.X, pubKey.Y)
+	clientShares = append(clientShares, handshake.NewKeyShareEntry(handshake.NewNamedGroup(handshake.Secp256r1), keyShareBytes))
+	keyShareExtension := handshake.NewKeyShareClientHello(clientShares)
+
 	// TODO required extensions for ClientHello
-	ch := handshake.NewClientHello(cipherSuites, []handshake.Extension{supportedVersionsExtension, supportedGroupsExtension})
+	ch := handshake.NewClientHello(cipherSuites, []handshake.Extension{supportedVersionsExtension, supportedGroupsExtension, keyShareExtension})
 	re := record.NewTLSPlainText(record.HandShake, ch.Encode())
 	printBytes(re.Encode())
 

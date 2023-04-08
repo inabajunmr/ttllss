@@ -21,6 +21,29 @@ import (
 // 	(0xFFFF)
 // } NamedGroup;
 
+const (
+	// Elliptic Curve Groups (ECDHE)
+	Secp256r1 uint16 = 0x0017
+	Secp384r1 uint16 = 0x0018
+	Secp521r1 uint16 = 0x0019
+	X25519    uint16 = 0x001D
+	X448      uint16 = 0x001E
+
+	// Finite Field Groups (DHE)
+	Ffdhe2048 uint16 = 0x0100
+	Ffdhe3072 uint16 = 0x0101
+	Ffdhe4096 uint16 = 0x0102
+	Ffdhe6144 uint16 = 0x0103
+	Ffdhe8192 uint16 = 0x0104
+
+	// Reserved Code Points
+	FfdhePrivateUseStart uint16 = 0x01FC
+	FfdhePrivateUseEnd   uint16 = 0x01FF
+	EcdhePrivateUseStart uint16 = 0xFE00
+	EcdhePrivateUseEnd   uint16 = 0xFEFF
+	ReservedCodePoint    uint16 = 0xFFFF
+)
+
 type NamedGroup struct {
 	namedGroup uint16
 }

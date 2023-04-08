@@ -1,17 +1,38 @@
 package handshake
 
 import (
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
 	"reflect"
 	"testing"
 )
 
 func TestEncodeAndDecode(t *testing.T) {
 	cipherSuites := []CipherSuite{TLS_AES_128_GCM_SHA256, TLS_AES_256_GCM_SHA384}
-	supportedVersionsExtensions := NewSupportedVersionsForClient(
+
+	// extensions
+	// supported_versions
+	supportedVersionsExtension := NewSupportedVersionsForClient(
 		[]ProtocolVersion{NewProtocolVersion(0x0304)},
 	)
-	supportedGroupsExtension := NewSupportedGroupsExtention([]NamedGroup{NewNamedGroup(0x001D), NewNamedGroup(0x0017)})
-	ch := NewClientHello(cipherSuites, []Extension{supportedVersionsExtensions, supportedGroupsExtension})
+
+	// supported_groups
+	supportedGroupsExtension := NewSupportedGroupsExtention([]NamedGroup{NewNamedGroup(Secp256r1), NewNamedGroup(X25519)})
+
+	// key_share
+	var clientShares []KeyShareEntry
+	curve := elliptic.P256()
+	privKey, err := ecdsa.GenerateKey(curve, rand.Reader)
+	if err != nil {
+		panic(err)
+	}
+	pubKey := privKey.PublicKey
+	keyShareBytes := elliptic.Marshal(curve, pubKey.X, pubKey.Y)
+	clientShares = append(clientShares, KeyShareEntry{group: NewNamedGroup(Secp256r1), keyExchange: keyShareBytes})
+	keyShareExtension := KeyShareClientHello{clientShares: clientShares}
+
+	ch := NewClientHello(cipherSuites, []Extension{supportedVersionsExtension, supportedGroupsExtension, keyShareExtension})
 
 	encoded := ch.Encode()
 	decoded := DecodeClientHello(encoded)
