@@ -14,11 +14,11 @@ func TestEncodeAndDecode(t *testing.T) {
 	// extensions
 	// supported_versions
 	supportedVersionsExtension := NewSupportedVersionsForClient(
-		[]ProtocolVersion{NewProtocolVersion(0x0304)},
+		[]ProtocolVersion{0x0304},
 	)
 
 	// supported_groups
-	supportedGroupsExtension := NewSupportedGroupsExtention([]NamedGroup{NewNamedGroup(Secp256r1), NewNamedGroup(X25519)})
+	supportedGroupsExtension := NewSupportedGroupsExtention([]NamedGroup{Secp256r1, X25519})
 
 	// key_share
 	var clientShares []KeyShareEntry
@@ -29,7 +29,7 @@ func TestEncodeAndDecode(t *testing.T) {
 	}
 	pubKey := privKey.PublicKey
 	keyShareBytes := elliptic.Marshal(curve, pubKey.X, pubKey.Y)
-	clientShares = append(clientShares, KeyShareEntry{group: NewNamedGroup(Secp256r1), keyExchange: keyShareBytes})
+	clientShares = append(clientShares, KeyShareEntry{group: Secp256r1, keyExchange: keyShareBytes})
 	keyShareExtension := KeyShareClientHello{clientShares: clientShares}
 
 	ch := NewClientHello(cipherSuites, []Extension{supportedVersionsExtension, supportedGroupsExtension, keyShareExtension})

@@ -39,7 +39,7 @@ func NewClientHello(cipherSuites []CipherSuite, extensions []Extension) ClientHe
 	rand.Read(legacySessionId[:])
 
 	return ClientHello{
-		legacyVersion:            ProtocolVersion{0x0303},
+		legacyVersion:            0x0303,
 		random:                   random,
 		legacySessionId:          legacySessionId[:],
 		cipherSuites:             cipherSuites,
