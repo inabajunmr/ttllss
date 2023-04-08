@@ -91,7 +91,6 @@ func (ch ClientHello) Encode() []byte {
 	return encoded
 }
 
-// TODO implement decode and check decode using other implementation sample message
 func DecodeClientHello(data []byte) ClientHello {
 	// legacyVersion
 	data, legacyVersion := DecodeProtocolVersion(data)

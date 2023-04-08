@@ -32,7 +32,11 @@ func TestEncodeAndDecode(t *testing.T) {
 	clientShares = append(clientShares, KeyShareEntry{group: Secp256r1, keyExchange: keyShareBytes})
 	keyShareExtension := KeyShareClientHello{clientShares: clientShares}
 
-	ch := NewClientHello(cipherSuites, []Extension{supportedVersionsExtension, supportedGroupsExtension, keyShareExtension})
+	// signature_algorithms
+	var signatureAlgorithms []SignatureScheme
+	signatureAlgorithms = append(signatureAlgorithms, EcdsaSecp256r1Sha256)
+	signatureAlgorithmsExtension := NewSignatureAlgorithmExtention(signatureAlgorithms)
+	ch := NewClientHello(cipherSuites, []Extension{supportedVersionsExtension, supportedGroupsExtension, keyShareExtension, signatureAlgorithmsExtension})
 
 	encoded := ch.Encode()
 	decoded := DecodeClientHello(encoded)
@@ -80,5 +84,4 @@ func Test2(t *testing.T) {
 	}
 	c := DecodeClientHello(a)
 	t.Fatalf("%+v", c)
-
 }

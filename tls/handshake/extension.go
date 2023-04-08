@@ -52,6 +52,8 @@ func decodeExtension(data []byte, isClient bool) ([]byte, Extension) {
 		} else {
 			return data, KeyShareServerHelloDecode(extensionData)
 		}
+	case SignatureAlgorithms:
+		return data, DecodeSignatureAlgorithmExtention(extensionData)
 	}
 
 	return data, nil
