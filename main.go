@@ -32,7 +32,6 @@ func main() {
 	clientShares = append(clientShares, handshake.NewKeyShareEntry(handshake.Secp256r1, keyShareBytes))
 	keyShareExtension := handshake.NewKeyShareClientHello(clientShares)
 
-	// TODO required extensions for ClientHello
 	ch := handshake.NewClientHello(cipherSuites, []handshake.Extension{supportedVersionsExtension, supportedGroupsExtension, keyShareExtension})
 	re := record.NewTLSPlainText(record.HandShake, ch.Encode())
 	printBytes(re.Encode())
@@ -59,7 +58,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	_, err = conn.Write(re.Encode())
+	_, err = conn.Write(a)
 	if err != nil {
 		log.Fatal(err)
 	}

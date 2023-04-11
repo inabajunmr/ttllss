@@ -1,6 +1,7 @@
 package record
 
 import (
+	"bytes"
 	"encoding/binary"
 )
 
@@ -52,4 +53,34 @@ func (t TLSPlainText) Encode() []byte {
 	encoded = append(encoded, t.fragment...)
 
 	return encoded
+}
+
+func DecodeTLSPlainText(data []byte) TLSPlainText {
+
+	// type
+	var contentType ContentType
+	data, contentType = DecodeContentType(data)
+
+	// legacyRecordVersion
+	legacyRecordVersionByte := data[:2]
+	var legacyRecordVersion uint16
+	binary.Read(bytes.NewReader(legacyRecordVersionByte), binary.BigEndian, &legacyRecordVersion)
+	data = data[2:]
+
+	// length
+	lengthByte := data[:2]
+	var length uint16
+	binary.Read(bytes.NewReader(lengthByte), binary.BigEndian, &length)
+	data = data[2:]
+
+	// fragment
+	fragment := data[:length]
+	_ = data[length:]
+
+	return TLSPlainText{
+		contentType:         contentType,
+		legacyRecordVersion: legacyRecordVersion,
+		length:              length,
+		fragment:            fragment,
+	}
 }

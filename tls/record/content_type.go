@@ -13,11 +13,11 @@ type ContentType int
 // } ContentType;
 
 const (
-	Invalid ContentType = iota
-	ChangeChipherSpec
-	Alert
-	HandShake
-	ApplicationData
+	Invalid           ContentType = 0
+	ChangeChipherSpec ContentType = 20
+	Alert             ContentType = 21
+	HandShake         ContentType = 22
+	ApplicationData   ContentType = 23
 )
 
 func (c ContentType) Encode() byte {
@@ -35,4 +35,9 @@ func (c ContentType) Encode() byte {
 	}
 
 	return 255
+}
+
+func DecodeContentType(data []byte) ([]byte, ContentType) {
+	t := data[0]
+	return data[1:], ContentType(t)
 }
