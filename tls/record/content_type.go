@@ -1,6 +1,6 @@
 package record
 
-type ContentType int
+type ContentType byte
 
 // ref. https://datatracker.ietf.org/doc/html/rfc8446#section-5.1
 // enum {

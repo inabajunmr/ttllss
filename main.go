@@ -33,7 +33,18 @@ func main() {
 	keyShareExtension := handshake.NewKeyShareClientHello(clientShares)
 
 	ch := handshake.NewClientHello(cipherSuites, []handshake.Extension{supportedVersionsExtension, supportedGroupsExtension, keyShareExtension})
-	re := record.NewTLSPlainText(record.HandShake, ch.Encode())
+
+	var a [3]byte
+	// binary.BigEndian.PutUint32(a[:], uint32(len(ch.Encode())))
+	a[0] = byte(len(ch.Encode()) >> 16 & 0xFF)
+	a[1] = byte(len(ch.Encode()) >> 8 & 0xFF)
+	a[2] = byte(len(ch.Encode()) & 0xFF)
+
+	fmt.Printf("%x\n", a)
+
+	hsch := handshake.NewHandshakeClientHello(1, a, ch)
+
+	re := record.NewTLSPlainText(record.HandShake, hsch.Encode())
 	printBytes(re.Encode())
 
 	// // https://github.com/shiguredo/tls13-zig/blob/develop/src/tls_plain.zig
@@ -58,7 +69,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	_, err = conn.Write(a)
+	_, err = conn.Write(re.Encode())
 	if err != nil {
 		log.Fatal(err)
 	}
