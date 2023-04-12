@@ -33,16 +33,7 @@ func main() {
 	keyShareExtension := handshake.NewKeyShareClientHello(clientShares)
 
 	ch := handshake.NewClientHello(cipherSuites, []handshake.Extension{supportedVersionsExtension, supportedGroupsExtension, keyShareExtension})
-
-	var a [3]byte
-	// binary.BigEndian.PutUint32(a[:], uint32(len(ch.Encode())))
-	a[0] = byte(len(ch.Encode()) >> 16 & 0xFF)
-	a[1] = byte(len(ch.Encode()) >> 8 & 0xFF)
-	a[2] = byte(len(ch.Encode()) & 0xFF)
-
-	fmt.Printf("%x\n", a)
-
-	hsch := handshake.NewHandshakeClientHello(1, a, ch)
+	hsch := handshake.NewHandshakeClientHello(1, ch)
 
 	re := record.NewTLSPlainText(record.HandShake, hsch.Encode())
 	printBytes(re.Encode())
@@ -69,6 +60,7 @@ func main() {
 		log.Fatal(err)
 	}
 
+	// _, err = conn.Write(a)
 	_, err = conn.Write(re.Encode())
 	if err != nil {
 		log.Fatal(err)

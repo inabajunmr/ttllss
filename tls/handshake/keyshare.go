@@ -25,7 +25,7 @@ func (p KeyShareEntry) Encode() []byte {
 
 	// KeyShareEntry length
 	lengthByte := make([]byte, 2)
-	binary.BigEndian.PutUint16(lengthByte, uint16(2+len(p.keyExchange)))
+	binary.BigEndian.PutUint16(lengthByte, uint16(4+len(p.keyExchange))) // length byte + group byte + followings...
 	encoded = append(encoded, lengthByte...)
 
 	// group

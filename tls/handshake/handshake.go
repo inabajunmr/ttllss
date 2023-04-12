@@ -34,10 +34,15 @@ type Handshake struct {
 	// key_update           KeyUpdate
 }
 
-func NewHandshakeClientHello(msgType HandshakeType, length [3]byte, clientHello ClientHello) Handshake {
-	// num := len(clientHello.Encode())
-	// var buf [3]byte
-	// binary.BigEndian.PutUint32(buf[:], uint32(num))
+func NewHandshakeClientHello(msgType HandshakeType, clientHello ClientHello) Handshake {
+
+	var length [3]byte
+	// redundant
+	clientHelloLength := len(clientHello.Encode())
+
+	length[0] = byte(clientHelloLength >> 16 & 0xFF)
+	length[1] = byte(clientHelloLength >> 8 & 0xFF)
+	length[2] = byte(clientHelloLength & 0xFF)
 	return Handshake{msgType: msgType, length: length, clientHello: clientHello}
 }
 
