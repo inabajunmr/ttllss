@@ -1,5 +1,7 @@
 package handshake
 
+import "encoding/binary"
+
 // ref. https://datatracker.ietf.org/doc/html/rfc8446#section-4
 
 // struct {
@@ -21,9 +23,9 @@ package handshake
 
 type Handshake struct {
 	msgType     HandshakeType
-	length      [3]byte // TODO length いらなさそう
+	length      [3]byte
 	clientHello ClientHello
-	// server_hello         ServerHello
+	serverHello ServerHello
 	// end_of_early_data    EndOfEarlyData
 	// encrypted_extensions EncryptedExtensions
 	// certificate_request  CertificateRequest
@@ -56,5 +58,44 @@ func (h Handshake) Encode() []byte {
 	encoded = append(encoded, encodedClientHello...)
 
 	return encoded
+}
+
+func DecodeHandShake(data []byte) Handshake {
+	// msgType
+	var msgType HandshakeType
+	data, msgType = DecodeHandshakeType(data)
+
+	// lenghth
+	var length [3]byte
+	copy(length[:], data[:3])
+	lengthInt := int(binary.BigEndian.Uint16(data[:3])) // TODO なんかあやしげ
+	data = data[3:]
+
+	// handshake message
+	payload := data[:lengthInt]
+	_ = data[lengthInt:]
+
+	switch msgType {
+	case ClientHelloType:
+		return Handshake{
+			msgType:     msgType,
+			length:      length,
+			clientHello: DecodeClientHello(payload),
+		}
+	case ServerHelloType:
+		DecodeServerHello(payload)
+		return Handshake{
+			msgType:     msgType,
+			length:      length,
+			serverHello: DecodeServerHello(payload),
+		}
+
+	}
+
+	// TODO exception
+	return Handshake{
+		msgType: msgType,
+		length:  length,
+	}
 
 }

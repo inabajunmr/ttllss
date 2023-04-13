@@ -11,6 +11,25 @@ type Extension interface {
 	Encode() []byte
 }
 
+func EncodeExtensions(extensions []Extension) []byte {
+	// extensions
+	var encodedExtensions []byte
+	// construct extensions before encoding length of extension
+	for _, v := range extensions {
+		encodedExtensions = append(encodedExtensions, v.Encode()...)
+	}
+
+	extensionsLenBytes := make([]byte, 2)
+	extensionsLen := uint16(len(encodedExtensions))
+	binary.BigEndian.PutUint16(extensionsLenBytes, extensionsLen)
+
+	encoded := extensionsLenBytes
+	encoded = append(encoded, encodedExtensions...)
+
+	return encoded
+
+}
+
 func DecodeExtensions(data []byte, isClient bool) ([]byte, []Extension) {
 	lengthBytes := data[:2]
 	var length uint16

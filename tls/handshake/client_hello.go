@@ -76,17 +76,7 @@ func (ch ClientHello) Encode() []byte {
 	encoded = append(encoded, ch.legacyCompressionMethods[:]...)
 
 	// extensions
-	var extensions []byte
-	// construct extensions before encoding length of extension
-	for _, v := range ch.extensions {
-		extensions = append(extensions, v.Encode()...)
-	}
-
-	extensionsLenBytes := make([]byte, 2)
-	extensionsLen := uint16(len(extensions))
-	binary.BigEndian.PutUint16(extensionsLenBytes, extensionsLen)
-	encoded = append(encoded, extensionsLenBytes...)
-	encoded = append(encoded, extensions...)
+	encoded = append(encoded, EncodeExtensions(ch.extensions)...)
 
 	return encoded
 }

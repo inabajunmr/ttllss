@@ -55,6 +55,10 @@ func (t TLSPlainText) Encode() []byte {
 	return encoded
 }
 
+func (t TLSPlainText) Fragment() []byte {
+	return t.fragment
+}
+
 func DecodeTLSPlainText(data []byte) TLSPlainText {
 
 	// type
