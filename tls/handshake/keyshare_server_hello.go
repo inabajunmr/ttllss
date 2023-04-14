@@ -12,6 +12,10 @@ type KeyShareServerHello struct {
 	serverShare KeyShareEntry
 }
 
+func NewKeyShareServerHello(serverShare KeyShareEntry) KeyShareServerHello {
+	return KeyShareServerHello{serverShare: serverShare}
+}
+
 func (s KeyShareServerHello) Encode() []byte {
 
 	encodedShare := s.serverShare.Encode()

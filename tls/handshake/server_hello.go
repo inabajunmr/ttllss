@@ -87,7 +87,7 @@ func DecodeServerHello(data []byte) ServerHello {
 	data = data[1:]
 
 	// extensions
-	_, extensions := DecodeExtensions(data, true)
+	_, extensions := DecodeExtensions(data, false)
 
 	return ServerHello{
 		legacyVersion:           legacyVersion,

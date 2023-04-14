@@ -26,17 +26,21 @@ func NewSupportedVersionsForClient(versions []ProtocolVersion) SupportedVersions
 	return SupportedVersionsExtention{isClientHello: true, versions: versions}
 }
 
+func NewSupportedVersionsForServer(version ProtocolVersion) SupportedVersionsExtention {
+	return SupportedVersionsExtention{isClientHello: false, selectedVersion: version}
+}
+
 func (s SupportedVersionsExtention) Encode() []byte {
 	encoded := []byte{}
 	encoded = append(encoded, SupportedVersions.Encode()...)
 
-	// version number * 2 + 1(for 1 byte length field)
-	lengthBytes := make([]byte, 2)
-	extensionLength := uint16(len(s.versions)*2 + 1)
-	binary.BigEndian.PutUint16(lengthBytes, extensionLength)
-	encoded = append(encoded, lengthBytes...)
-
 	if s.isClientHello {
+		// version number * 2 + 1(for 1 byte length field)
+		lengthBytes := make([]byte, 2)
+		extensionLength := uint16(len(s.versions)*2 + 1)
+		binary.BigEndian.PutUint16(lengthBytes, extensionLength)
+		encoded = append(encoded, lengthBytes...)
+
 		// length
 		encoded = append(encoded, byte(len(s.versions)*2)) // 1 version uses 2 bytes
 		for _, v := range s.versions {
@@ -44,6 +48,12 @@ func (s SupportedVersionsExtention) Encode() []byte {
 		}
 		return encoded
 	} else {
+		// version number * 2
+		lengthBytes := make([]byte, 2)
+		extensionLength := uint16(2)
+		binary.BigEndian.PutUint16(lengthBytes, extensionLength)
+		encoded = append(encoded, lengthBytes...)
+
 		return append(encoded, s.selectedVersion.Encode()...)
 	}
 }

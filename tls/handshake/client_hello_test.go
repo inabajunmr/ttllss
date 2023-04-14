@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-func TestEncodeAndDecode(t *testing.T) {
+func TestClientHelloEncodeAndDecode(t *testing.T) {
 	cipherSuites := []CipherSuite{TLS_AES_128_GCM_SHA256, TLS_AES_256_GCM_SHA384}
 
 	// extensions
