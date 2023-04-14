@@ -1,7 +1,5 @@
 package handshake
 
-import "encoding/binary"
-
 // ref. https://datatracker.ietf.org/doc/html/rfc8446#section-4
 
 // struct {
@@ -48,14 +46,32 @@ func NewHandshakeClientHello(msgType HandshakeType, clientHello ClientHello) Han
 	return Handshake{msgType: msgType, length: length, clientHello: clientHello}
 }
 
+func NewHandshakeServerHello(msgType HandshakeType, serverHello ServerHello) Handshake {
+
+	var length [3]byte
+	// redundant
+	clientHelloLength := len(serverHello.Encode())
+
+	length[0] = byte(clientHelloLength >> 16 & 0xFF)
+	length[1] = byte(clientHelloLength >> 8 & 0xFF)
+	length[2] = byte(clientHelloLength & 0xFF)
+	return Handshake{msgType: msgType, length: length, serverHello: serverHello}
+}
+
 func (h Handshake) Encode() []byte {
 	encoded := []byte{}
 	encoded = append(encoded, byte(h.msgType))
 
 	encoded = append(encoded, h.length[:]...)
 
-	encodedClientHello := h.clientHello.Encode()
-	encoded = append(encoded, encodedClientHello...)
+	var encodedMessage []byte
+	switch h.msgType {
+	case ClientHelloType:
+		encodedMessage = h.clientHello.Encode()
+	case ServerHelloType:
+		encodedMessage = h.serverHello.Encode()
+	}
+	encoded = append(encoded, encodedMessage...)
 
 	return encoded
 }
@@ -69,7 +85,8 @@ func DecodeHandShake(data []byte) Handshake {
 	// lenghth
 	var length [3]byte
 	copy(length[:], data[:3])
-	lengthInt := int(binary.BigEndian.Uint16(data[:3])) // TODO なんかあやしげ
+	lengthInt := int(length[0])<<16 | int(length[1])<<8 | int(length[2])
+
 	data = data[3:]
 
 	// handshake message
