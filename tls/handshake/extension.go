@@ -3,7 +3,6 @@ package handshake
 import (
 	"bytes"
 	"encoding/binary"
-	"fmt"
 )
 
 // ref. https://datatracker.ietf.org/doc/html/rfc8446#section-4.2
@@ -68,10 +67,8 @@ func decodeExtension(data []byte, isClient bool) ([]byte, Extension) {
 		return data, DecodeSupportedGroups(extensionData)
 	case KeyShare:
 		if isClient {
-			fmt.Println("CLIENT")
 			return data, KeyShareClientHelloDecode(extensionData)
 		} else {
-			fmt.Println("SERVER")
 			return data, KeyShareServerHelloDecode(extensionData)
 		}
 	case SignatureAlgorithms:
