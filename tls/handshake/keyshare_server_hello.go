@@ -36,7 +36,7 @@ func (s KeyShareServerHello) Encode() []byte {
 	return encoded
 }
 
-func KeyShareServerHelloDecode(data []byte) KeyShareServerHello {
+func DecodeKeyShareServerHello(data []byte) KeyShareServerHello {
 	_, keyShareEntry := DecodeKeyShareEntry(data)
 	return KeyShareServerHello{serverShare: keyShareEntry}
 }

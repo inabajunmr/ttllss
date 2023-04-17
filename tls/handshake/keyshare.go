@@ -23,11 +23,6 @@ func NewKeyShareEntry(group NamedGroup, keyExchange []byte) KeyShareEntry {
 func (p KeyShareEntry) Encode() []byte {
 	var encoded []byte
 
-	// KeyShareEntry length
-	lengthByte := make([]byte, 2)
-	binary.BigEndian.PutUint16(lengthByte, uint16(4+len(p.keyExchange))) // length byte + group byte + followings...
-	encoded = append(encoded, lengthByte...)
-
 	// group
 	encoded = append(encoded, p.group.Encode()...)
 
@@ -43,10 +38,6 @@ func (p KeyShareEntry) Encode() []byte {
 }
 
 func DecodeKeyShareEntry(b []byte) ([]byte, KeyShareEntry) {
-	keyShareEntrylengthBytes := b[:2]
-	var keyShareEntryLength uint16
-	binary.Read(bytes.NewReader(keyShareEntrylengthBytes), binary.BigEndian, &keyShareEntryLength)
-	b = b[2:]
 
 	var group NamedGroup
 	b, group = DecodeNamedGroup(b)

@@ -67,9 +67,9 @@ func decodeExtension(data []byte, isClient bool) ([]byte, Extension) {
 		return data, DecodeSupportedGroups(extensionData)
 	case KeyShare:
 		if isClient {
-			return data, KeyShareClientHelloDecode(extensionData)
+			return data, DecodeKeyShareClientHello(extensionData)
 		} else {
-			return data, KeyShareServerHelloDecode(extensionData)
+			return data, DecodeKeyShareServerHello(extensionData)
 		}
 	case SignatureAlgorithms:
 		return data, DecodeSignatureAlgorithmExtention(extensionData)
