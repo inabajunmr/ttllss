@@ -3,8 +3,6 @@ package handshake
 import (
 	"bytes"
 	"encoding/binary"
-	"fmt"
-	"reflect"
 )
 
 // ref. https://datatracker.ietf.org/doc/html/rfc8446#section-4.2
@@ -19,10 +17,20 @@ func EncodeExtensions(extensions []Extension) []byte {
 	var encodedExtensions []byte
 	// construct extensions before encoding length of extension
 	for _, v := range extensions {
-		// TODO v の型に合わせて type を出力
-		// TODO v.Encode() のサイズに合わせて length を出力？
-		fmt.Println(reflect.TypeOf(v))
-		encodedExtensions = append(encodedExtensions, v.Encode()...)
+		// write type
+		encodedExtensions = append(encodedExtensions, v.Type().Encode()...)
+
+		// encode but don't write yet
+		extensionBody := v.Encode()
+
+		// write extension length
+		lengthBytes := make([]byte, 2)
+		extensionLength := uint16(len(extensionBody))
+		binary.BigEndian.PutUint16(lengthBytes, extensionLength)
+		encodedExtensions = append(encodedExtensions, lengthBytes...)
+
+		// write encoded extension body
+		encodedExtensions = append(encodedExtensions, extensionBody...)
 	}
 
 	extensionsLenBytes := make([]byte, 2)

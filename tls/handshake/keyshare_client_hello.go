@@ -27,20 +27,10 @@ func (s KeyShareClientHello) Encode() []byte {
 		encodedShares = append(encodedShares, v.Encode()...)
 	}
 
-	// TODO type と length のエンコードは共通部分にまとめたい
-	// Encode と Decode の対応が取れてない（type と length を Encode では書いてるのに Decode は共通化されてて個々の関数に書いてない）からテストがめんどくさい
-
 	var encoded []byte
-	// type
-	encoded = append(encoded, KeyShare.Encode()...)
-
-	// key share extension length
-	lengthBytes := make([]byte, 2)
-	var encodedSharesLength = len(encodedShares)
-	binary.BigEndian.PutUint16(lengthBytes, uint16(encodedSharesLength+2))
-	encoded = append(encoded, lengthBytes...)
 
 	// key share data length
+	var encodedSharesLength = len(encodedShares)
 	lengthBytes2 := make([]byte, 2)
 	binary.BigEndian.PutUint16(lengthBytes2, uint16(encodedSharesLength))
 	encoded = append(encoded, lengthBytes2...)

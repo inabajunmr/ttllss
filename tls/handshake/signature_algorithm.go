@@ -26,13 +26,6 @@ func (s SignatureSchemeList) Type() ExtensionType {
 func (s SignatureSchemeList) Encode() []byte {
 
 	encoded := []byte{}
-	encoded = append(encoded, SignatureAlgorithms.Encode()...)
-
-	// version number * 2 + 2(for 2 byte length field)
-	extensionLengthBytes := make([]byte, 2)
-	extensionLength := uint16(len(s.supportedSignatureAlgorithms)*2 + 2)
-	binary.BigEndian.PutUint16(extensionLengthBytes, extensionLength)
-	encoded = append(encoded, extensionLengthBytes...)
 
 	// length
 	SignatureAlgorithmLengthBytes := make([]byte, 2)

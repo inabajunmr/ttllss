@@ -42,13 +42,6 @@ func (s SupportedGroupsExtention) Type() ExtensionType {
 func (s SupportedGroupsExtention) Encode() []byte {
 
 	encoded := []byte{}
-	encoded = append(encoded, SupportedGroups.Encode()...)
-
-	// version number * 2 + 2(for 2 byte length field)
-	extensionLengthBytes := make([]byte, 2)
-	extensionLength := uint16(len(s.namedGroupList)*2 + 2)
-	binary.BigEndian.PutUint16(extensionLengthBytes, extensionLength)
-	encoded = append(encoded, extensionLengthBytes...)
 
 	// length
 	supportedGroupsLengthBytes := make([]byte, 2)

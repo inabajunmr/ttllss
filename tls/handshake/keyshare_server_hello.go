@@ -1,7 +1,5 @@
 package handshake
 
-import "encoding/binary"
-
 // ref. https://datatracker.ietf.org/doc/html/rfc8446#section-4.2.8
 
 // struct {
@@ -25,14 +23,6 @@ func (s KeyShareServerHello) Encode() []byte {
 	encodedShare := s.serverShare.Encode()
 
 	var encoded []byte
-	// type
-	encoded = append(encoded, KeyShare.Encode()...)
-
-	// length
-	lengthBytes := make([]byte, 2)
-	var encodedSharesLength = len(encodedShare)
-	binary.BigEndian.PutUint16(lengthBytes, uint16(encodedSharesLength))
-	encoded = append(encoded, lengthBytes...)
 
 	// serverShare
 	encoded = append(encoded, encodedShare...)

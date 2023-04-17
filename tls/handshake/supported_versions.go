@@ -1,9 +1,5 @@
 package handshake
 
-import (
-	"encoding/binary"
-)
-
 // https://datatracker.ietf.org/doc/html/rfc8446#section-4.2.1
 
 // struct {
@@ -36,14 +32,8 @@ func (s SupportedVersionsExtention) Type() ExtensionType {
 
 func (s SupportedVersionsExtention) Encode() []byte {
 	encoded := []byte{}
-	encoded = append(encoded, SupportedVersions.Encode()...)
 
 	if s.isClientHello {
-		// version number * 2 + 1(for 1 byte length field)
-		lengthBytes := make([]byte, 2)
-		extensionLength := uint16(len(s.versions)*2 + 1)
-		binary.BigEndian.PutUint16(lengthBytes, extensionLength)
-		encoded = append(encoded, lengthBytes...)
 
 		// length
 		encoded = append(encoded, byte(len(s.versions)*2)) // 1 version uses 2 bytes
@@ -52,12 +42,6 @@ func (s SupportedVersionsExtention) Encode() []byte {
 		}
 		return encoded
 	} else {
-		// version number * 2
-		lengthBytes := make([]byte, 2)
-		extensionLength := uint16(2)
-		binary.BigEndian.PutUint16(lengthBytes, extensionLength)
-		encoded = append(encoded, lengthBytes...)
-
 		return append(encoded, s.selectedVersion.Encode()...)
 	}
 }
