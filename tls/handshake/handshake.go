@@ -76,7 +76,6 @@ func (h Handshake) Encode() []byte {
 	return encoded
 }
 
-// TODO ENCODE & DECODE のテスト
 func DecodeHandShake(data []byte) Handshake {
 	// msgType
 	var msgType HandshakeType
