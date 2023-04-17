@@ -63,6 +63,9 @@ func main() {
 
 	fmt.Printf("%+v\n", hsch)
 	fmt.Printf("%+v\n", shHandShake)
+
+	// TODO server hello が返ってくるので鍵を交換
+	// その後 TLSCiphertext で Certificate とかが来るはず
 }
 
 func printBytes(bytes []byte) {
