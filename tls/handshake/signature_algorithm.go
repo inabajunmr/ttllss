@@ -19,6 +19,10 @@ func NewSignatureAlgorithmExtention(supportedSignatureAlgorithms []SignatureSche
 	return SignatureSchemeList{supportedSignatureAlgorithms: supportedSignatureAlgorithms}
 }
 
+func (s SignatureSchemeList) Type() ExtensionType {
+	return SignatureAlgorithms
+}
+
 func (s SignatureSchemeList) Encode() []byte {
 
 	encoded := []byte{}

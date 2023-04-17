@@ -35,6 +35,10 @@ func NewSupportedGroupsExtention(namedGroupList []NamedGroup) SupportedGroupsExt
 	return SupportedGroupsExtention{namedGroupList: namedGroupList}
 }
 
+func (s SupportedGroupsExtention) Type() ExtensionType {
+	return SupportedGroups
+}
+
 func (s SupportedGroupsExtention) Encode() []byte {
 
 	encoded := []byte{}

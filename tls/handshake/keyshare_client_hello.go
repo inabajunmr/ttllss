@@ -16,6 +16,10 @@ func NewKeyShareClientHello(clientShare []KeyShareEntry) KeyShareClientHello {
 	return KeyShareClientHello{clientShares: clientShare}
 }
 
+func (s KeyShareClientHello) Type() ExtensionType {
+	return KeyShare
+}
+
 func (s KeyShareClientHello) Encode() []byte {
 
 	var encodedShares []byte

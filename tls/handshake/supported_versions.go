@@ -30,6 +30,10 @@ func NewSupportedVersionsForServer(version ProtocolVersion) SupportedVersionsExt
 	return SupportedVersionsExtention{isClientHello: false, selectedVersion: version}
 }
 
+func (s SupportedVersionsExtention) Type() ExtensionType {
+	return SupportedVersions
+}
+
 func (s SupportedVersionsExtention) Encode() []byte {
 	encoded := []byte{}
 	encoded = append(encoded, SupportedVersions.Encode()...)

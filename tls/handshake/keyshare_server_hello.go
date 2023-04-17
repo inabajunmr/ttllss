@@ -16,6 +16,10 @@ func NewKeyShareServerHello(serverShare KeyShareEntry) KeyShareServerHello {
 	return KeyShareServerHello{serverShare: serverShare}
 }
 
+func (s KeyShareServerHello) Type() ExtensionType {
+	return KeyShare
+}
+
 func (s KeyShareServerHello) Encode() []byte {
 
 	encodedShare := s.serverShare.Encode()
