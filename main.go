@@ -59,9 +59,10 @@ func main() {
 	fmt.Println(string(buf[:count]))
 
 	shRecord := record.DecodeTLSPlainText(buf[:count])
-	handShake := handshake.DecodeHandShake(shRecord.Fragment())
+	shHandShake := handshake.DecodeHandShake(shRecord.Fragment())
 
-	fmt.Printf("%+v", handShake)
+	fmt.Printf("%+v\n", hsch)
+	fmt.Printf("%+v\n", shHandShake)
 }
 
 func printBytes(bytes []byte) {
