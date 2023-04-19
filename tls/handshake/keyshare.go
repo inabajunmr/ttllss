@@ -12,27 +12,27 @@ import (
 // } KeyShareEntry;
 
 type KeyShareEntry struct {
-	group       NamedGroup
-	keyExchange []byte
+	Group       NamedGroup
+	KeyExchange []byte
 }
 
 func NewKeyShareEntry(group NamedGroup, keyExchange []byte) KeyShareEntry {
-	return KeyShareEntry{group: group, keyExchange: keyExchange}
+	return KeyShareEntry{Group: group, KeyExchange: keyExchange}
 }
 
 func (p KeyShareEntry) Encode() []byte {
 	var encoded []byte
 
 	// group
-	encoded = append(encoded, p.group.Encode()...)
+	encoded = append(encoded, p.Group.Encode()...)
 
 	// KeyExchange length
 	lengthByte2 := make([]byte, 2)
-	binary.BigEndian.PutUint16(lengthByte2, uint16(len(p.keyExchange)))
+	binary.BigEndian.PutUint16(lengthByte2, uint16(len(p.KeyExchange)))
 	encoded = append(encoded, lengthByte2...)
 
 	// KeyExchange
-	encoded = append(encoded, p.keyExchange...)
+	encoded = append(encoded, p.KeyExchange...)
 
 	return encoded
 }
@@ -50,5 +50,5 @@ func DecodeKeyShareEntry(b []byte) ([]byte, KeyShareEntry) {
 	keyExchange := b[:keyExchangeLength]
 	b = b[keyExchangeLength:]
 
-	return b, KeyShareEntry{group: group, keyExchange: keyExchange}
+	return b, KeyShareEntry{Group: group, KeyExchange: keyExchange}
 }

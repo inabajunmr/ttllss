@@ -34,10 +34,10 @@ func TestEncodeAndDecode(t *testing.T) {
 	re := NewTLSPlainText(HandShake, ch.Encode())
 
 	encoded := re.Encode()
-	decoded := DecodeTLSPlainText(encoded)
+	_, decoded := DecodeTLSPlainText(encoded)
 
-	if re.contentType != decoded.contentType {
-		t.Fatalf("contentType original:%v decoded:%v", re.contentType, decoded.contentType)
+	if re.ContentType != decoded.ContentType {
+		t.Fatalf("contentType original:%v decoded:%v", re.ContentType, decoded.ContentType)
 	}
 	if re.legacyRecordVersion != decoded.legacyRecordVersion {
 		t.Fatalf("legacyRecordVersion original:%v decoded:%v", re.legacyRecordVersion, decoded.legacyRecordVersion)

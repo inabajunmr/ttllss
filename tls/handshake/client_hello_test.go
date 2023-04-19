@@ -29,7 +29,7 @@ func TestClientHelloEncodeAndDecode(t *testing.T) {
 	}
 	pubKey := privKey.PublicKey
 	keyShareBytes := elliptic.Marshal(curve, pubKey.X, pubKey.Y)
-	clientShares = append(clientShares, KeyShareEntry{group: Secp256r1, keyExchange: keyShareBytes})
+	clientShares = append(clientShares, KeyShareEntry{Group: Secp256r1, KeyExchange: keyShareBytes})
 	keyShareExtension := KeyShareClientHello{clientShares: clientShares}
 
 	// signature_algorithms

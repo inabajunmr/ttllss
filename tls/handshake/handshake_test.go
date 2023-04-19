@@ -42,7 +42,7 @@ func sampleServerHello() ServerHello {
 	}
 	pubKey := privKey.PublicKey
 	keyShareBytes := elliptic.Marshal(curve, pubKey.X, pubKey.Y)
-	keyShareExtension := KeyShareServerHello{serverShare: KeyShareEntry{group: Secp256r1, keyExchange: keyShareBytes}}
+	keyShareExtension := KeyShareServerHello{serverShare: KeyShareEntry{Group: Secp256r1, KeyExchange: keyShareBytes}}
 
 	// signature_algorithms
 	var signatureAlgorithms []SignatureScheme

@@ -98,3 +98,12 @@ func DecodeServerHello(data []byte) ServerHello {
 		extensions:              extensions,
 	}
 }
+
+func (sh ServerHello) GetKeyShareExtenson() KeyShareEntry {
+	for _, v := range sh.extensions {
+		if v.Type() == KeyShare {
+			return v.(KeyShareServerHello).serverShare
+		}
+	}
+	return KeyShareEntry{}
+}

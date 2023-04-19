@@ -1,5 +1,7 @@
 package handshake
 
+import "fmt"
+
 // ref. https://datatracker.ietf.org/doc/html/rfc8446#section-4
 
 // struct {
@@ -23,7 +25,7 @@ type Handshake struct {
 	msgType     HandshakeType
 	length      [3]byte
 	clientHello ClientHello
-	serverHello ServerHello
+	ServerHello ServerHello
 	// end_of_early_data    EndOfEarlyData
 	// encrypted_extensions EncryptedExtensions
 	// certificate_request  CertificateRequest
@@ -55,7 +57,7 @@ func NewHandshakeServerHello(msgType HandshakeType, serverHello ServerHello) Han
 	length[0] = byte(clientHelloLength >> 16 & 0xFF)
 	length[1] = byte(clientHelloLength >> 8 & 0xFF)
 	length[2] = byte(clientHelloLength & 0xFF)
-	return Handshake{msgType: msgType, length: length, serverHello: serverHello}
+	return Handshake{msgType: msgType, length: length, ServerHello: serverHello}
 }
 
 func (h Handshake) Encode() []byte {
@@ -69,15 +71,15 @@ func (h Handshake) Encode() []byte {
 	case ClientHelloType:
 		encodedMessage = h.clientHello.Encode()
 	case ServerHelloType:
-		encodedMessage = h.serverHello.Encode()
+		encodedMessage = h.ServerHello.Encode()
 	}
 	encoded = append(encoded, encodedMessage...)
 
 	return encoded
 }
 
+// msgType
 func DecodeHandShake(data []byte) Handshake {
-	// msgType
 	var msgType HandshakeType
 	data, msgType = DecodeHandshakeType(data)
 
@@ -88,9 +90,10 @@ func DecodeHandShake(data []byte) Handshake {
 
 	data = data[3:]
 
+	fmt.Printf("length int : %v\n", lengthInt)
+	fmt.Printf("data : %x\n", data)
 	// handshake message
 	payload := data[:lengthInt]
-	_ = data[lengthInt:]
 
 	switch msgType {
 	case ClientHelloType:
@@ -104,7 +107,7 @@ func DecodeHandShake(data []byte) Handshake {
 		return Handshake{
 			msgType:     msgType,
 			length:      length,
-			serverHello: DecodeServerHello(payload),
+			ServerHello: DecodeServerHello(payload),
 		}
 
 	}
