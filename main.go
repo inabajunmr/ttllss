@@ -5,6 +5,7 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/sha256"
+	"encoding/binary"
 	"fmt"
 	"log"
 	"net"
@@ -118,10 +119,45 @@ func main() {
 	}
 
 	fmt.Println("====== CERTIFICATE ======")
-	var certificateRecord record.TLSPlainText
+	var certificateRecord record.TLSCiphertext
 	printBytes(remain)
-	remain, certificateRecord = record.DecodeTLSPlainText(remain)
-	fmt.Printf("%+v", certificateRecord)
+	remain, certificateRecord = record.DecodeTLSCiphertext(remain)
+	// ここまではあってる
+	printBytes(certificateRecord.EncryptedRecord)
+
+	// AEAD で復号
+	// AdditionalData
+	{
+		additioanlData := certificateRecord.AdditionalData()
+	}
+
+	// Nonce
+	{
+		// https://zenn.dev/0a24/articles/tls1_3-rfc8448
+		// シーケンス番号は このタイミングで 0 でいいのか？（CipherText の送信が1つ目？
+		// the first record transmitted under a particular traffic key MUST use sequence number 0.
+		// https://datatracker.ietf.org/doc/html/rfc5116#section-5.3
+		var secNumber uint64
+		secNumber = 0
+		// https://datatracker.ietf.org/doc/html/rfc5116#section-5.3
+		ivLength := 12
+		// 1.  The 64-bit record sequence number is encoded in network byte
+		// order and padded to the left with zeros to iv_length.
+		seqNumBytes := make([]byte, 8)
+		binary.BigEndian.PutUint64(seqNumBytes, secNumber)
+		paddedSeqNumBytes := make([]byte, ivLength)
+		copy(paddedSeqNumBytes[ivLength-len(seqNumBytes):], seqNumBytes)
+
+		// 2.  The padded sequence number is XORed with either the static
+		// client_write_iv or server_write_iv (depending on the role).
+		// XOR the padded sequence number with the appropriate write IV
+		var writeIV []byte
+		// TODO writeIV の計算
+		for i := 0; i < ivLength; i++ {
+			paddedSeqNumBytes[i] ^= writeIV[i]
+		}
+	}
+
 }
 
 func printBytes(bytes []byte) {
