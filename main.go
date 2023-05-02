@@ -4,11 +4,15 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
+	"crypto/sha256"
 	"fmt"
 	"log"
 	"net"
 
+	"golang.org/x/crypto/hkdf"
+
 	"github.com/inabajunmr/ttllss/tls/handshake"
+	"github.com/inabajunmr/ttllss/tls/key"
 	"github.com/inabajunmr/ttllss/tls/record"
 )
 
@@ -80,6 +84,29 @@ func main() {
 	sharedKey := x.Bytes()
 	printBytes(sharedKey)
 
+	fmt.Printf("--- DERIVE SERVER HANDSHAKE TRAFFIC SECRET START ---")
+	// 0
+	// |
+	// v
+	// PSK ->  HKDF-Extract = Early Secret
+	hash := sha256.New
+	earlySecret := hkdf.Extract(hash, []byte{}, []byte{})
+	// |
+	// v
+	// Derive-Secret(., "derived", "")
+	handshakeSecretInput := key.DeriveSecret(earlySecret, []byte("derived"), []byte{})
+	// |
+	// v
+	// (EC)DHE -> HKDF-Extract = Handshake Secret
+	handShakeSecret := hkdf.Extract(hash, sharedKey, handshakeSecretInput)
+	// +-----> Derive-Secret(., "s hs traffic",
+	// |                     ClientHello...ServerHello)
+	// |                     = server_handshake_traffic_secret
+	serverHandshakeTrafficSecret := key.DeriveSecret(handShakeSecret, []byte("s hs traffic"), hsch.Encode(), shRecord.Fragment())
+	fmt.Println(serverHandshakeTrafficSecret)
+
+	fmt.Println("--- DERIVE SERVER HANDSHAKE TRAFFIC SECRET END ---")
+
 	fmt.Println("====== CHANGE CIPHER SPEC ======")
 
 	// TODO 本来は DecodeTLSPlainText でループして type で処理を分ける
@@ -95,9 +122,6 @@ func main() {
 	printBytes(remain)
 	remain, certificateRecord = record.DecodeTLSPlainText(remain)
 	fmt.Printf("%+v", certificateRecord)
-	// その後 TLSCiphertext で Certificate とかが来るはず
-	// Application data で来るのでこれをいい感じにする
-
 }
 
 func printBytes(bytes []byte) {
