@@ -1,6 +1,8 @@
 package main
 
 import (
+	"crypto/aes"
+	"crypto/cipher"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -104,7 +106,9 @@ func main() {
 	// |                     ClientHello...ServerHello)
 	// |                     = server_handshake_traffic_secret
 	serverHandshakeTrafficSecret := key.DeriveSecret(handShakeSecret, []byte("s hs traffic"), hsch.Encode(), shRecord.Fragment())
+	fmt.Println("serverHandshakeTrafficSecret")
 	fmt.Println(serverHandshakeTrafficSecret)
+	fmt.Println("serverHandshakeTrafficSecret")
 
 	fmt.Println("--- DERIVE SERVER HANDSHAKE TRAFFIC SECRET END ---")
 
@@ -127,11 +131,15 @@ func main() {
 
 	// AEAD で復号
 	// AdditionalData
+	var additionalData []byte
 	{
-		additioanlData := certificateRecord.AdditionalData()
+		additionalData = certificateRecord.AdditionalData()
 	}
 
+	ivLength := 12
+
 	// Nonce
+	var nonce []byte
 	{
 		// https://zenn.dev/0a24/articles/tls1_3-rfc8448
 		// シーケンス番号は このタイミングで 0 でいいのか？（CipherText の送信が1つ目？
@@ -140,7 +148,6 @@ func main() {
 		var secNumber uint64
 		secNumber = 0
 		// https://datatracker.ietf.org/doc/html/rfc5116#section-5.3
-		ivLength := 12
 		// 1.  The 64-bit record sequence number is encoded in network byte
 		// order and padded to the left with zeros to iv_length.
 		seqNumBytes := make([]byte, 8)
@@ -151,12 +158,39 @@ func main() {
 		// 2.  The padded sequence number is XORed with either the static
 		// client_write_iv or server_write_iv (depending on the role).
 		// XOR the padded sequence number with the appropriate write IV
-		var writeIV []byte
-		// TODO writeIV の計算
+		// writeIV の計算 https://datatracker.ietf.org/doc/html/rfc8446#section-7.3
+		// [sender]_write_iv  = HKDF-Expand-Label(Secret, "iv", "", iv_length)
+		serverWriteIV := key.HkdfExpandLabel(serverHandshakeTrafficSecret, []byte("iv"), []byte(""), uint16(ivLength))
+
 		for i := 0; i < ivLength; i++ {
-			paddedSeqNumBytes[i] ^= writeIV[i]
+			paddedSeqNumBytes[i] ^= serverWriteIV[i]
 		}
+
+		nonce = paddedSeqNumBytes
 	}
+
+	// serverWriteKey
+	// https://datatracker.ietf.org/doc/html/rfc5116#section-5.1
+	// K_LEN is 16 octets,
+	kLength := 16
+	serverWriteKey := key.HkdfExpandLabel(serverHandshakeTrafficSecret, []byte("key"), []byte(""), uint16(kLength))
+	fmt.Println("serverWriteKey")
+	printBytes(serverWriteKey)
+	fmt.Println("serverWriteKey")
+
+	// AEAD Decrypt
+	// https://datatracker.ietf.org/doc/html/rfc8446#section-5.2
+	// plaintext of encrypted_record =
+	//      AEAD-Decrypt(peer_write_key, nonce,
+	// 			 additional_data, AEADEncrypted)
+	decrypted, err := decrypt(certificateRecord.EncryptedRecord, nonce, additionalData, serverWriteKey)
+	if err != nil {
+		// TODO 認証で落ちてる
+		// いろいろ適当なのでHKDF周りのテストから書いてく
+		log.Fatal(err)
+
+	}
+	printBytes(decrypted)
 
 }
 
@@ -175,4 +209,31 @@ func printBytes(bytes []byte) {
 	}
 
 	fmt.Println()
+}
+
+func decrypt(cipherText, nonce, additionalData, key []byte) ([]byte, error) {
+	// キーから新しい AES 暗号化ブロックを作成する
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		return nil, err
+	}
+
+	// AEAD 暗号化ブロックを作成する
+	aead, err := cipher.NewGCM(block)
+	if err != nil {
+		return nil, err
+	}
+
+	// 追加の認証データを使用して、認証タグを計算する
+	tag := aead.Seal(nil, nonce, cipherText, additionalData)
+
+	// 認証タグを cipherText の末尾に追加する
+	cipherTextWithTag := append(cipherText, tag...)
+
+	// 暗号文と認証タグから元のデータを復号化する
+	plaintext, err := aead.Open(nil, nonce, cipherTextWithTag, additionalData)
+	if err != nil {
+		return nil, err
+	}
+	return plaintext, nil
 }
