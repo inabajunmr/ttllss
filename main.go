@@ -6,13 +6,10 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
-	"crypto/sha256"
 	"encoding/binary"
 	"fmt"
 	"log"
 	"net"
-
-	"golang.org/x/crypto/hkdf"
 
 	"github.com/inabajunmr/ttllss/tls/handshake"
 	"github.com/inabajunmr/ttllss/tls/key"
@@ -30,12 +27,16 @@ func main() {
 
 	supportedGroupsExtension := handshake.NewSupportedGroupsExtention([]handshake.NamedGroup{handshake.Secp256r1})
 
+	keys := key.ClientKeys{}
+
 	var clientShares []handshake.KeyShareEntry
 	curve := elliptic.P256()
+	keys.SetCurve(curve)
 	privKey, err := ecdsa.GenerateKey(curve, rand.Reader)
 	if err != nil {
 		panic(err)
 	}
+	keys.SetClientPrivateKey(*privKey)
 	pubKey := privKey.PublicKey
 	keyShareBytes := elliptic.Marshal(curve, pubKey.X, pubKey.Y)
 	clientShares = append(clientShares, handshake.NewKeyShareEntry(handshake.Secp256r1, keyShareBytes))
@@ -72,44 +73,18 @@ func main() {
 	// TODO buf[:count] にまとめて返されるメッセージも全部入ってるので、DecodeTLSPlainText で残りの bytes を返してあげて引き続きデコードを進める必要がある
 	// Google の場合 ChangeCipherSpec が返ってきてその後暗号化された Certificate とかが返ってくる
 	shHandShake := handshake.DecodeHandShake(shRecord.Fragment())
-
-	fmt.Printf("%+v\n", hsch)
-	fmt.Printf("%+v\n", shHandShake)
-
-	fmt.Printf("--- SERVER RESPONSE START ---")
-	printBytes(buf[:count])
-	fmt.Printf("--- SERVER RESPONSE END ---")
-
 	serverPubX, serverPubY := elliptic.Unmarshal(elliptic.P256(), shHandShake.ServerHello.GetKeyShareExtenson().KeyExchange)
+	keys.SetServerPublicKey(serverPubX, serverPubY)
 
-	// TODO server hello が返ってくるので鍵を交換
-	x, _ := curve.ScalarMult(serverPubX, serverPubY, privKey.D.Bytes())
-	sharedKey := x.Bytes()
-	printBytes(sharedKey)
+	fmt.Println("--- SERVER RESPONSE START ---")
+	printBytes(buf[:count])
+	fmt.Println("--- SERVER RESPONSE END ---")
 
-	fmt.Printf("--- DERIVE SERVER HANDSHAKE TRAFFIC SECRET START ---")
-	// 0
-	// |
-	// v
-	// PSK ->  HKDF-Extract = Early Secret
-	hash := sha256.New
-	earlySecret := hkdf.Extract(hash, []byte{}, []byte{})
-	// |
-	// v
-	// Derive-Secret(., "derived", "")
-	handshakeSecretInput := key.DeriveSecret(earlySecret, []byte("derived"), []byte{})
-	// |
-	// v
-	// (EC)DHE -> HKDF-Extract = Handshake Secret
-	handShakeSecret := hkdf.Extract(hash, sharedKey, handshakeSecretInput)
-	// +-----> Derive-Secret(., "s hs traffic",
-	// |                     ClientHello...ServerHello)
-	// |                     = server_handshake_traffic_secret
-	serverHandshakeTrafficSecret := key.DeriveSecret(handShakeSecret, []byte("s hs traffic"), hsch.Encode(), shRecord.Fragment())
+	fmt.Println("--- DERIVE SERVER HANDSHAKE TRAFFIC SECRET START ---")
+	serverHandshakeTrafficSecret := keys.GetServerHandshakeTrafficSecret(hsch.Encode(), shRecord.Fragment())
 	fmt.Println("serverHandshakeTrafficSecret")
-	fmt.Println(serverHandshakeTrafficSecret)
+	printBytes(serverHandshakeTrafficSecret)
 	fmt.Println("serverHandshakeTrafficSecret")
-
 	fmt.Println("--- DERIVE SERVER HANDSHAKE TRAFFIC SECRET END ---")
 
 	fmt.Println("====== CHANGE CIPHER SPEC ======")
