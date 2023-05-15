@@ -1,11 +1,16 @@
 package key
 
 import (
+	"crypto/aes"
+	"crypto/cipher"
 	"crypto/sha256"
+	"encoding/binary"
 	"encoding/hex"
 	"fmt"
+	"log"
 	"testing"
 
+	"github.com/inabajunmr/ttllss/tls/record"
 	"golang.org/x/crypto/curve25519"
 	"golang.org/x/crypto/hkdf"
 )
@@ -60,8 +65,130 @@ func Test(t *testing.T) {
 	// b67b7d690cc16c4e75e54213cb2d37b4e9c912bcded9105d42befd59d391ad38
 	fmt.Printf("clientDeriveSecret: %x\n", clientDeriveSecret)
 
+	// TODO ===========
 	// TODO ここまであってるので AEAD でメッセージを復号
+	encryptedCertificateMessage, _ := hex.DecodeString("17030302a2d1ff334a56f5bff6594a07cc87b580233f500f45e489e7f33af35edf7869fcf40aa40aa2b8ea73f848a7ca07612ef9f945cb960b4068905123ea78b111b429ba9191cd05d2a389280f526134aadc7fc78c4b729df828b5ecf7b13bd9aefb0e57f271585b8ea9bb355c7c79020716cfb9b1183ef3ab20e37d57a6b9d7477609aee6e122a4cf51427325250c7d0e509289444c9b3a648f1d71035d2ed65b0e3cdd0cbae8bf2d0b227812cbb360987255cc744110c453baa4fcd610928d809810e4b7ed1a8fd991f06aa6248204797e36a6a73b70a2559c09ead686945ba246ab66e5edd8044b4c6de3fcf2a89441ac66272fd8fb330ef8190579b3684596c960bd596eea520a56a8d650f563aad27409960dca63d3e688611ea5e22f4415cf9538d51a200c27034272968a264ed6540c84838d89f72c24461aad6d26f59ecaba9acbbb317b66d902f4f292a36ac1b639c637ce343117b659622245317b49eeda0c6258f100d7d961ffb138647e92ea330faeea6dfa31c7a84dc3bd7e1b7a6c7178af36879018e3f252107f243d243dc7339d5684c8b0378bf30244da8c87c843f5e56eb4c5e8280a2b48052cf93b16499a66db7cca71e4599426f7d461e66f99882bd89fc50800becca62d6c74116dbd2972fda1fa80f85df881edbe5a37668936b335583b599186dc5c6918a396fa48a181d6b6fa4f9d62d513afbb992f2b992f67f8afe67f76913fa388cb5630c8ca01e0c65d11c66a1e2ac4c85977b7c7a6999bbf10dc35ae69f5515614636c0b9b68c19ed2e31c0b3b66763038ebba42f3b38edc0399f3a9f23faa63978c317fc9fa66a73f60f0504de93b5b845e275592c12335ee340bbc4fddd502784016e4b3be7ef04dda49f4b440a30cb5d2af939828fd4ae3794e44f94df5a631ede42c1719bfdabf0253fe5175be898e750edc53370d2b")
+	_, certificateRecord := record.DecodeTLSCiphertext(encryptedCertificateMessage)
+	fmt.Printf("certificateRecord.EncryptedRecord: %x\n", certificateRecord.EncryptedRecord)
+
+	// AEAD で復号
+	// AdditionalData
+	var additionalData []byte
+	{
+		additionalData = certificateRecord.AdditionalData()
+	}
+
+	ivLength := 12
+
+	// Nonce
+	var nonce []byte
+	{
+		// https://zenn.dev/0a24/articles/tls1_3-rfc8448
+		// the first record transmitted under a particular traffic key MUST use sequence number 0.
+		// https://datatracker.ietf.org/doc/html/rfc5116#section-5.3
+		var secNumber uint64
+		secNumber = 0
+		// https://datatracker.ietf.org/doc/html/rfc5116#section-5.3
+		// 1.  The 64-bit record sequence number is encoded in network byte
+		// order and padded to the left with zeros to iv_length.
+		seqNumBytes := make([]byte, 8)
+		binary.BigEndian.PutUint64(seqNumBytes, secNumber)
+		paddedSeqNumBytes := make([]byte, ivLength)
+		copy(paddedSeqNumBytes[ivLength-len(seqNumBytes):], seqNumBytes)
+
+		// 2.  The padded sequence number is XORed with either the static
+		// client_write_iv or server_write_iv (depending on the role).
+		// XOR the padded sequence number with the appropriate write IV
+		// writeIV の計算 https://datatracker.ietf.org/doc/html/rfc8446#section-7.3
+		// [sender]_write_iv  = HKDF-Expand-Label(Secret, "iv", "", iv_length)
+		serverWriteIV := HkdfExpandLabel(clientDeriveSecret, []byte("iv"), []byte(""), uint16(ivLength))
+		fmt.Println("serverWriteIV")
+		// あってる 5d313eb2671276ee13000b30
+		printBytes(serverWriteIV)
+		fmt.Println("serverWriteIV")
+		for i := 0; i < ivLength; i++ {
+			paddedSeqNumBytes[i] ^= serverWriteIV[i]
+		}
+
+		nonce = paddedSeqNumBytes
+	}
+
+	// serverWriteKey
+	// https://datatracker.ietf.org/doc/html/rfc5116#section-5.1
+	// K_LEN is 16 octets,
+	kLength := 16
+	serverWriteKey := HkdfExpandLabel(clientDeriveSecret, []byte("key"), []byte(""), uint16(kLength))
+	// これはあってる 3fce516009c21727d0f2e4e86ee403bc
+	fmt.Println("serverWriteKey")
+	printBytes(serverWriteKey)
+	fmt.Println("serverWriteKey")
+
+	// AEAD Decrypt
+	// https://datatracker.ietf.org/doc/html/rfc8446#section-5.2
+	// plaintext of encrypted_record =
+	//      AEAD-Decrypt(peer_write_key, nonce,
+	// 			 additional_data, AEADEncrypted)
+	// TODO nonce か additionalData がおかしいらしい
+	fmt.Println("additionalData")
+	// なんとなくあってる気がする
+	printBytes(additionalData)
+	fmt.Println("additionalData")
+
+	decrypted, err := decrypt(certificateRecord.EncryptedRecord, nonce, additionalData, serverWriteKey)
+	if err != nil {
+		// TODO 認証で落ちてる
+		// いろいろ適当なのでHKDF周りのテストから書いてく
+		log.Fatal(err)
+
+	}
+	printBytes(decrypted)
+
+	// TODO TODO エラーでてないけど復号ちゃんとできてるかパースして確認する
 
 	t.Fail()
 
+}
+
+func printBytes(bytes []byte) {
+	counta := 0
+	fmt.Print("0000   ")
+
+	for _, v := range bytes {
+		fmt.Printf("%.2x ", v)
+		counta++
+		if counta == 16 {
+			fmt.Println()
+			counta = 0
+			fmt.Print("0000   ")
+		}
+	}
+
+	fmt.Println()
+}
+
+func decrypt(cipherText, nonce, additionalData, key []byte) ([]byte, error) {
+	// キーから新しい AES 暗号化ブロックを作成する
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		return nil, err
+	}
+
+	// AEAD 暗号化ブロックを作成する
+	aead, err := cipher.NewGCM(block)
+	if err != nil {
+		return nil, err
+	}
+
+	// 追加の認証データを使用して、認証タグを計算する
+	// tag := aead.Seal(nil, nonce, cipherText, additionalData)
+
+	// 認証タグを cipherText の末尾に追加する
+	// cipherTextWithTag := append(cipherText, tag...)
+
+	// 暗号文と認証タグから元のデータを復号化する
+	plaintext, err := aead.Open(nil, nonce, cipherText, additionalData)
+	if err != nil {
+		return nil, err
+	}
+	return plaintext, nil
 }
