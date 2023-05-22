@@ -27,7 +27,7 @@ type Handshake struct {
 	clientHello ClientHello
 	ServerHello ServerHello
 	// end_of_early_data    EndOfEarlyData
-	// encrypted_extensions EncryptedExtensions
+	EncryptedExtensions EncryptedExtensions
 	// certificate_request  CertificateRequest
 	// certificate          Certificate
 	// certificate_verify   CertificateVerify
@@ -72,6 +72,8 @@ func (h Handshake) Encode() []byte {
 		encodedMessage = h.clientHello.Encode()
 	case ServerHelloType:
 		encodedMessage = h.ServerHello.Encode()
+	case EncryptedExtensionsType:
+		encodedMessage = h.EncryptedExtensions.Encode()
 	}
 	encoded = append(encoded, encodedMessage...)
 
@@ -94,6 +96,8 @@ func DecodeHandShake(data []byte) Handshake {
 	fmt.Printf("data : %x\n", data)
 	// handshake message
 	payload := data[:lengthInt]
+	remain := data[lengthInt:]
+	fmt.Printf("remain : %x\n", remain)
 
 	switch msgType {
 	case ClientHelloType:
@@ -110,6 +114,12 @@ func DecodeHandShake(data []byte) Handshake {
 			ServerHello: DecodeServerHello(payload),
 		}
 
+	case EncryptedExtensionsType:
+		return Handshake{
+			msgType:             msgType,
+			length:              length,
+			EncryptedExtensions: DecodeEncryptedExtensions(payload),
+		}
 	}
 
 	// TODO exception

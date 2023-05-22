@@ -10,6 +10,7 @@ import (
 	"log"
 	"testing"
 
+	"github.com/inabajunmr/ttllss/tls/handshake"
 	"github.com/inabajunmr/ttllss/tls/record"
 	"golang.org/x/crypto/curve25519"
 	"golang.org/x/crypto/hkdf"
@@ -136,14 +137,16 @@ func Test(t *testing.T) {
 
 	decrypted, err := decrypt(certificateRecord.EncryptedRecord, nonce, additionalData, serverWriteKey)
 	if err != nil {
-		// TODO 認証で落ちてる
-		// いろいろ適当なのでHKDF周りのテストから書いてく
 		log.Fatal(err)
-
 	}
+	fmt.Println("decrypted")
 	printBytes(decrypted)
+	fmt.Println("decrypted")
 
-	// TODO TODO エラーでてないけど復号ちゃんとできてるかパースして確認する
+	// あってそう
+	// TODO decrypte にハンドシェイクメッセージが復数はいってる構造のになるので remain を返して残りに対して DecodeHandShake を連打する感じになるはず
+	decoded := handshake.DecodeHandShake(decrypted)
+	fmt.Printf("%+v\n", decoded)
 
 	t.Fail()
 
