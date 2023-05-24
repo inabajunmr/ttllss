@@ -29,7 +29,7 @@ type Handshake struct {
 	// end_of_early_data    EndOfEarlyData
 	EncryptedExtensions EncryptedExtensions
 	// certificate_request  CertificateRequest
-	// certificate          Certificate
+	certificate Certificate
 	// certificate_verify   CertificateVerify
 	// finished             Finished
 	// new_session_ticke    NewSessionTicket
@@ -68,12 +68,15 @@ func (h Handshake) Encode() []byte {
 
 	var encodedMessage []byte
 	switch h.msgType {
-	case ClientHelloType:
+	case ClientHelloHandshakeType:
 		encodedMessage = h.clientHello.Encode()
-	case ServerHelloType:
+	case ServerHelloHandshakeType:
 		encodedMessage = h.ServerHello.Encode()
-	case EncryptedExtensionsType:
+	case EncryptedExtensionsHandshakeType:
 		encodedMessage = h.EncryptedExtensions.Encode()
+	case CertificateHandshakeType:
+		encodedMessage = h.certificate.Encode()
+
 	}
 	encoded = append(encoded, encodedMessage...)
 
@@ -81,7 +84,7 @@ func (h Handshake) Encode() []byte {
 }
 
 // msgType
-func DecodeHandShake(data []byte) Handshake {
+func DecodeHandShake(data []byte) ([]byte, Handshake) {
 	var msgType HandshakeType
 	data, msgType = DecodeHandshakeType(data)
 
@@ -92,38 +95,42 @@ func DecodeHandShake(data []byte) Handshake {
 
 	data = data[3:]
 
-	fmt.Printf("length int : %v\n", lengthInt)
-	fmt.Printf("data : %x\n", data)
 	// handshake message
 	payload := data[:lengthInt]
 	remain := data[lengthInt:]
-	fmt.Printf("remain : %x\n", remain)
 
 	switch msgType {
-	case ClientHelloType:
-		return Handshake{
+	case ClientHelloHandshakeType:
+		return remain, Handshake{
 			msgType:     msgType,
 			length:      length,
 			clientHello: DecodeClientHello(payload),
 		}
-	case ServerHelloType:
+	case ServerHelloHandshakeType:
 		DecodeServerHello(payload)
-		return Handshake{
+		return remain, Handshake{
 			msgType:     msgType,
 			length:      length,
 			ServerHello: DecodeServerHello(payload),
 		}
 
-	case EncryptedExtensionsType:
-		return Handshake{
+	case EncryptedExtensionsHandshakeType:
+		return remain, Handshake{
 			msgType:             msgType,
 			length:              length,
 			EncryptedExtensions: DecodeEncryptedExtensions(payload),
 		}
+	case CertificateHandshakeType:
+		fmt.Println("CCCCCCCC")
+		return remain, Handshake{
+			msgType:     msgType,
+			length:      length,
+			certificate: DecodeCertificate(payload),
+		}
 	}
 
 	// TODO exception
-	return Handshake{
+	return remain, Handshake{
 		msgType: msgType,
 		length:  length,
 	}

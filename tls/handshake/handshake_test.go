@@ -11,11 +11,11 @@ import (
 
 func TestHandshakeEncodeAndDecode(t *testing.T) {
 
-	hs := NewHandshakeServerHello(ServerHelloType, sampleServerHello())
+	hs := NewHandshakeServerHello(ServerHelloHandshakeType, sampleServerHello())
 
 	encoded := hs.Encode()
 	printBytes(encoded)
-	decoded := DecodeHandShake(encoded)
+	_, decoded := DecodeHandShake(encoded)
 
 	if !reflect.DeepEqual(hs, decoded) {
 		t.Fatalf("original: %+v decoded: %+v", encoded, decoded)

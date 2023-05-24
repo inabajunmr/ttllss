@@ -18,18 +18,18 @@ package handshake
 // } HandshakeType;
 
 const (
-	ClientHelloType         HandshakeType = 1
-	ServerHelloType         HandshakeType = 2
-	NewSessionTicketType    HandshakeType = 4
-	EndOfEarlyDataType      HandshakeType = 5
-	EncryptedExtensionsType HandshakeType = 8
-	CertificateType         HandshakeType = 11
-	CertificateRequestType  HandshakeType = 13
-	CertificateVerifyType   HandshakeType = 15
-	FinishedType            HandshakeType = 20
-	KeyUpdateType           HandshakeType = 24
-	MessageHashType         HandshakeType = 254
-	HandshakeType255Type    HandshakeType = 255
+	ClientHelloHandshakeType         HandshakeType = 1
+	ServerHelloHandshakeType         HandshakeType = 2
+	NewSessionTicketHandshakeType    HandshakeType = 4
+	EndOfEarlyDataHandshakeType      HandshakeType = 5
+	EncryptedExtensionsHandshakeType HandshakeType = 8
+	CertificateHandshakeType         HandshakeType = 11
+	CertificateRequestHandshakeType  HandshakeType = 13
+	CertificateVerifyHandshakeType   HandshakeType = 15
+	FinishedHandshakeType            HandshakeType = 20
+	KeyUpdateHandshakeType           HandshakeType = 24
+	MessageHashHandshakeType         HandshakeType = 254
+	HandshakeType255HandshakeType    HandshakeType = 255
 )
 
 type HandshakeType byte
