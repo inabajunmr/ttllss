@@ -50,7 +50,7 @@ func (e CertificateEntry) encode() []byte {
 	return encoded
 }
 
-func decodeCertificateEntry(data []byte) CertificateEntry {
+func decodeCertificateEntry(data []byte) ([]byte, CertificateEntry) {
 	var length [3]byte
 	copy(length[:], data[:3])
 	lengthInt := int(length[0])<<16 | int(length[1])<<8 | int(length[2])
@@ -60,9 +60,9 @@ func decodeCertificateEntry(data []byte) CertificateEntry {
 	certData := data[:lengthInt]
 	remain := data[lengthInt:]
 
-	_, extensions := DecodeExtensions(remain, false)
+	remain, extensions := DecodeExtensions(remain, false)
 
-	return CertificateEntry{
+	return remain, CertificateEntry{
 		certData:   certData,
 		extensions: extensions,
 	}
@@ -101,7 +101,28 @@ func (c Certificate) Encode() []byte {
 }
 
 func DecodeCertificate(data []byte) Certificate {
-	// TODO ここから
+	contextLength := int(data[:1][0])
+	data = data[1:]
+	context := data[:contextLength]
+	data = data[contextLength:]
 
-	return Certificate{}
+	var length [3]byte
+	copy(length[:], data[:3])
+	certificateListLength := int(length[0])<<16 | int(length[1])<<8 | int(length[2])
+	data = data[3:]
+
+	certificateListBytes := data[:certificateListLength]
+	var certificateList []CertificateEntry
+	for len(certificateListBytes) > 0 {
+		var certificate CertificateEntry
+		certificateListBytes, certificate = decodeCertificateEntry(certificateListBytes)
+		certificateList = append(certificateList, certificate)
+	}
+
+	// data = data[certificateListLength:]
+
+	return Certificate{
+		certificateRequestContext: context,
+		certificateList:           certificateList,
+	}
 }

@@ -143,12 +143,15 @@ func Test(t *testing.T) {
 	printBytes(decrypted)
 	fmt.Println("decrypted")
 
-	// あってそう
-	// TODO decrypte にハンドシェイクメッセージが復数はいってる構造のになるので remain を返して残りに対して DecodeHandShake を連打する感じになるはず
-	remain, decoded := handshake.DecodeHandShake(decrypted)
-	fmt.Printf("D1 %+v\n", decoded)
-	_, decoded = handshake.DecodeHandShake(remain)
-	fmt.Printf("D2 %+v\n", decoded)
+	remain, encryptedExtension := handshake.DecodeHandShake(decrypted)
+	fmt.Printf("D1 %+v\n", encryptedExtension)
+	remain, certificate := handshake.DecodeHandShake(remain)
+	fmt.Printf("D2 %+v\n", certificate)
+	remain, certificateVerify := handshake.DecodeHandShake(remain)
+	fmt.Printf("D3 %+v\n", certificateVerify)
+	remain, finished := handshake.DecodeHandShake(remain)
+	fmt.Printf("D4 %+v\n", finished)
+	fmt.Printf("REMAIN %+v\n", remain)
 
 	t.Fail()
 

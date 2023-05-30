@@ -1,7 +1,5 @@
 package handshake
 
-import "fmt"
-
 // ref. https://datatracker.ietf.org/doc/html/rfc8446#section-4
 
 // struct {
@@ -29,7 +27,7 @@ type Handshake struct {
 	// end_of_early_data    EndOfEarlyData
 	EncryptedExtensions EncryptedExtensions
 	// certificate_request  CertificateRequest
-	certificate Certificate
+	Certificate Certificate
 	// certificate_verify   CertificateVerify
 	// finished             Finished
 	// new_session_ticke    NewSessionTicket
@@ -75,7 +73,7 @@ func (h Handshake) Encode() []byte {
 	case EncryptedExtensionsHandshakeType:
 		encodedMessage = h.EncryptedExtensions.Encode()
 	case CertificateHandshakeType:
-		encodedMessage = h.certificate.Encode()
+		encodedMessage = h.Certificate.Encode()
 
 	}
 	encoded = append(encoded, encodedMessage...)
@@ -121,11 +119,10 @@ func DecodeHandShake(data []byte) ([]byte, Handshake) {
 			EncryptedExtensions: DecodeEncryptedExtensions(payload),
 		}
 	case CertificateHandshakeType:
-		fmt.Println("CCCCCCCC")
 		return remain, Handshake{
 			msgType:     msgType,
 			length:      length,
-			certificate: DecodeCertificate(payload),
+			Certificate: DecodeCertificate(payload),
 		}
 	}
 
