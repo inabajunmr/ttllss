@@ -3,6 +3,7 @@ package key
 import (
 	"crypto/aes"
 	"crypto/cipher"
+	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/binary"
 	"encoding/hex"
@@ -62,9 +63,9 @@ func Test(t *testing.T) {
 	fmt.Printf("cilentExtractSecretHandshake: %x\n", cilentExtractSecretHandshake)
 
 	// {client}  derive secret "tls13 c hs traffic" (same as server)
-	clientDeriveSecret := DeriveSecret(cilentExtractSecretHandshake, []byte("s hs traffic"), clientHello, serverHello)
+	serverHandshakeTrafficSecret := DeriveSecret(cilentExtractSecretHandshake, []byte("s hs traffic"), clientHello, serverHello)
 	// b67b7d690cc16c4e75e54213cb2d37b4e9c912bcded9105d42befd59d391ad38
-	fmt.Printf("clientDeriveSecret: %x\n", clientDeriveSecret)
+	fmt.Printf("clientDeriveSecret: %x\n", serverHandshakeTrafficSecret)
 
 	// TODO ===========
 	// TODO ここまであってるので AEAD でメッセージを復号
@@ -102,7 +103,7 @@ func Test(t *testing.T) {
 		// XOR the padded sequence number with the appropriate write IV
 		// writeIV の計算 https://datatracker.ietf.org/doc/html/rfc8446#section-7.3
 		// [sender]_write_iv  = HKDF-Expand-Label(Secret, "iv", "", iv_length)
-		serverWriteIV := HkdfExpandLabel(clientDeriveSecret, []byte("iv"), []byte(""), uint16(ivLength))
+		serverWriteIV := HkdfExpandLabel(serverHandshakeTrafficSecret, []byte("iv"), []byte(""), uint16(ivLength))
 		fmt.Println("serverWriteIV")
 		// あってる 5d313eb2671276ee13000b30
 		printBytes(serverWriteIV)
@@ -118,7 +119,7 @@ func Test(t *testing.T) {
 	// https://datatracker.ietf.org/doc/html/rfc5116#section-5.1
 	// K_LEN is 16 octets,
 	kLength := 16
-	serverWriteKey := HkdfExpandLabel(clientDeriveSecret, []byte("key"), []byte(""), uint16(kLength))
+	serverWriteKey := HkdfExpandLabel(serverHandshakeTrafficSecret, []byte("key"), []byte(""), uint16(kLength))
 	// これはあってる 3fce516009c21727d0f2e4e86ee403bc
 	fmt.Println("serverWriteKey")
 	printBytes(serverWriteKey)
@@ -144,13 +145,62 @@ func Test(t *testing.T) {
 	fmt.Println("decrypted")
 
 	remain, encryptedExtension := handshake.DecodeHandShake(decrypted)
-	fmt.Printf("D1 %+v\n", encryptedExtension)
+	fmt.Printf("===== encryptedExtension ===== \n %+v\n", encryptedExtension)
 	remain, certificate := handshake.DecodeHandShake(remain)
-	fmt.Printf("D2 %+v\n", certificate)
+	fmt.Printf("===== certificate ===== \n %+v\n", certificate)
+	// 証明書検証は多分サンプルなので無理
+	// 最初の方に証明書の秘密鍵書いてあった
 	remain, certificateVerify := handshake.DecodeHandShake(remain)
-	fmt.Printf("D3 %+v\n", certificateVerify)
+	fmt.Printf("===== certificateVerify ===== \n %+v\n", certificateVerify)
+	// TODO ここの verify は書けるはず
+	fmt.Printf("REMAIN %+v\n", remain)
 	remain, finished := handshake.DecodeHandShake(remain)
-	fmt.Printf("D4 %+v\n", finished)
+	fmt.Printf("===== finished ===== \n  %+v\n", finished)
+	printBytes(finished.Finished.VerifyData)
+
+	// https://datatracker.ietf.org/doc/html/rfc8446#section-4.4.4
+	// finished_key = HKDF-Expand-Label(BaseKey, "finished", "", Hash.length)
+	// base key is serverHandshakeTrafficSecret at https://datatracker.ietf.org/doc/html/rfc8446#section-4.4
+	// hash length は 16 じゃない
+	//
+	finishedKey := HkdfExpandLabel(serverHandshakeTrafficSecret, []byte("finished"), []byte(""), sha256.Size)
+	fmt.Println("==== finished key ====")
+	// これはあっている
+	printBytes(finishedKey)
+
+	// verify_data =
+	// HMAC(finished_key,
+	// 	 Transcript-Hash(Handshake Context,
+	// 					 Certificate*, CertificateVerify*))
+	hash := hmac.New(sha256.New, []byte(finishedKey))
+
+	// メッセージをハッシュ関数に書き込む
+	// TODO HMAC が一致しない
+	// 多分エンコードで元の値に戻せてない気がする
+
+	// エンコードした値じゃなくて　RFC8448 の値を直接入れたら合うのか試す
+	// TODO エンコードした値から署名を検証するんじゃなくてデコード時にオリジナルの値を持っておくよう修正
+	encryptedExtensionBytes, _ := hex.DecodeString("080000240022000a00140012001d00170018001901000101010201030104001c0002400100000000")
+	certificateBytes, _ := hex.DecodeString("0b0001b9000001b50001b0308201ac30820115a003020102020102300d06092a864886f70d01010b0500300e310c300a06035504031303727361301e170d3136303733303031323335395a170d3236303733303031323335395a300e310c300a0603550403130372736130819f300d06092a864886f70d010101050003818d0030818902818100b4bb498f8279303d980836399b36c6988c0c68de55e1bdb826d3901a2461eafd2de49a91d015abbc9a95137ace6c1af19eaa6af98c7ced43120998e187a80ee0ccb0524b1b018c3e0b63264d449a6d38e22a5fda430846748030530ef0461c8ca9d9efbfae8ea6d1d03e2bd193eff0ab9a8002c47428a6d35a8d88d79f7f1e3f0203010001a31a301830090603551d1304023000300b0603551d0f0404030205a0300d06092a864886f70d01010b05000381810085aad2a0e5b9276b908c65f73a7267170618a54c5f8a7b337d2df7a594365417f2eae8f8a58c8f8172f9319cf36b7fd6c55b80f21a03015156726096fd335e5e67f2dbf102702e608ccae6bec1fc63a42a99be5c3eb7107c3c54e9b9eb2bd5203b1c3b84e0a8b2f759409ba3eac9d91d402dcc0cc8f8961229ac9187b42b4de10000")
+	certificateVerifyBytes, _ := hex.DecodeString("0f000084080400805a747c5d88fa9bd2e55ab085a61015b7211f824cd484145ab3ff52f1fda8477b0b7abc90db78e2d33a5c141a078653fa6bef780c5ea248eeaaa785c4f394cab6d30bbe8d4859ee511f602957b15411ac027671459e46445c9ea58c181e818e95b8c3fb0bf3278409d3be152a3da5043e063dda65cdf5aea20d53dfacd42f74f3")
+
+	th := TranscriptHash(clientHello, serverHello,
+		encryptedExtensionBytes, certificateBytes,
+		certificateVerifyBytes)
+	fmt.Printf("===== th ===== \n")
+	printBytes(th)
+
+	// th := TranscriptHash(clientHello, serverHello,
+	// 	encryptedExtension.EncryptedExtensions.Encode(), certificate.Certificate.Encode(),
+	// 	certificateVerify.Encode())
+
+	hash.Write([]byte(th))
+
+	// HMACを取得
+	verifyData := hash.Sum(nil)
+	fmt.Printf("===== hmac =====\n")
+	printBytes(verifyData)
+
 	fmt.Printf("REMAIN %+v\n", remain)
 
 	t.Fail()

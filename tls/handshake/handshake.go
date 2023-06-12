@@ -27,9 +27,9 @@ type Handshake struct {
 	// end_of_early_data    EndOfEarlyData
 	EncryptedExtensions EncryptedExtensions
 	// certificate_request  CertificateRequest
-	Certificate Certificate
-	// certificate_verify   CertificateVerify
-	// finished             Finished
+	Certificate       Certificate
+	CertificateVerify CertificateVerify
+	Finished          Finished
 	// new_session_ticke    NewSessionTicket
 	// key_update           KeyUpdate
 }
@@ -74,6 +74,8 @@ func (h Handshake) Encode() []byte {
 		encodedMessage = h.EncryptedExtensions.Encode()
 	case CertificateHandshakeType:
 		encodedMessage = h.Certificate.Encode()
+	case CertificateVerifyHandshakeType:
+		encodedMessage = h.CertificateVerify.Encode()
 
 	}
 	encoded = append(encoded, encodedMessage...)
@@ -123,6 +125,18 @@ func DecodeHandShake(data []byte) ([]byte, Handshake) {
 			msgType:     msgType,
 			length:      length,
 			Certificate: DecodeCertificate(payload),
+		}
+	case CertificateVerifyHandshakeType:
+		return remain, Handshake{
+			msgType:           msgType,
+			length:            length,
+			CertificateVerify: DecodeCertificateVerify(payload),
+		}
+	case FinishedHandshakeType:
+		return remain, Handshake{
+			msgType:  msgType,
+			length:   length,
+			Finished: DecodeFinished(payload),
 		}
 	}
 

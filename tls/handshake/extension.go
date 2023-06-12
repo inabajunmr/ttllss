@@ -89,5 +89,5 @@ func decodeExtension(data []byte, isClient bool) ([]byte, Extension) {
 		return data, DecodeSignatureAlgorithmExtention(extensionData)
 	}
 
-	return data, nil
+	return data, UnknownExtention{extensionType, extensionData}
 }
