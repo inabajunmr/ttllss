@@ -20,10 +20,11 @@ package handshake
 // } Handshake;
 
 type Handshake struct {
-	msgType     HandshakeType
-	length      [3]byte
-	clientHello ClientHello
-	ServerHello ServerHello
+	msgType         HandshakeType
+	length          [3]byte
+	OriginalPayload []byte
+	clientHello     ClientHello
+	ServerHello     ServerHello
 	// end_of_early_data    EndOfEarlyData
 	EncryptedExtensions EncryptedExtensions
 	// certificate_request  CertificateRequest
@@ -43,7 +44,7 @@ func NewHandshakeClientHello(msgType HandshakeType, clientHello ClientHello) Han
 	length[0] = byte(clientHelloLength >> 16 & 0xFF)
 	length[1] = byte(clientHelloLength >> 8 & 0xFF)
 	length[2] = byte(clientHelloLength & 0xFF)
-	return Handshake{msgType: msgType, length: length, clientHello: clientHello}
+	return Handshake{msgType: msgType, length: length, clientHello: clientHello, OriginalPayload: clientHello.Encode()}
 }
 
 func NewHandshakeServerHello(msgType HandshakeType, serverHello ServerHello) Handshake {
@@ -55,7 +56,7 @@ func NewHandshakeServerHello(msgType HandshakeType, serverHello ServerHello) Han
 	length[0] = byte(clientHelloLength >> 16 & 0xFF)
 	length[1] = byte(clientHelloLength >> 8 & 0xFF)
 	length[2] = byte(clientHelloLength & 0xFF)
-	return Handshake{msgType: msgType, length: length, ServerHello: serverHello}
+	return Handshake{msgType: msgType, length: length, ServerHello: serverHello, OriginalPayload: serverHello.Encode()}
 }
 
 func (h Handshake) Encode() []byte {
@@ -85,6 +86,7 @@ func (h Handshake) Encode() []byte {
 
 // msgType
 func DecodeHandShake(data []byte) ([]byte, Handshake) {
+	original := data
 	var msgType HandshakeType
 	data, msgType = DecodeHandshakeType(data)
 
@@ -98,52 +100,59 @@ func DecodeHandShake(data []byte) ([]byte, Handshake) {
 	// handshake message
 	payload := data[:lengthInt]
 	remain := data[lengthInt:]
+	original = original[:len(original)-len(remain)]
 
 	switch msgType {
 	case ClientHelloHandshakeType:
 		return remain, Handshake{
-			msgType:     msgType,
-			length:      length,
-			clientHello: DecodeClientHello(payload),
+			msgType:         msgType,
+			length:          length,
+			OriginalPayload: original,
+			clientHello:     DecodeClientHello(payload),
 		}
 	case ServerHelloHandshakeType:
 		DecodeServerHello(payload)
 		return remain, Handshake{
-			msgType:     msgType,
-			length:      length,
-			ServerHello: DecodeServerHello(payload),
+			msgType:         msgType,
+			length:          length,
+			OriginalPayload: original,
+			ServerHello:     DecodeServerHello(payload),
 		}
 
 	case EncryptedExtensionsHandshakeType:
 		return remain, Handshake{
 			msgType:             msgType,
 			length:              length,
+			OriginalPayload:     original,
 			EncryptedExtensions: DecodeEncryptedExtensions(payload),
 		}
 	case CertificateHandshakeType:
 		return remain, Handshake{
-			msgType:     msgType,
-			length:      length,
-			Certificate: DecodeCertificate(payload),
+			msgType:         msgType,
+			length:          length,
+			OriginalPayload: original,
+			Certificate:     DecodeCertificate(payload),
 		}
 	case CertificateVerifyHandshakeType:
 		return remain, Handshake{
 			msgType:           msgType,
 			length:            length,
+			OriginalPayload:   original,
 			CertificateVerify: DecodeCertificateVerify(payload),
 		}
 	case FinishedHandshakeType:
 		return remain, Handshake{
-			msgType:  msgType,
-			length:   length,
-			Finished: DecodeFinished(payload),
+			msgType:         msgType,
+			length:          length,
+			OriginalPayload: original,
+			Finished:        DecodeFinished(payload),
 		}
 	}
 
-	// TODO exception
 	return remain, Handshake{
-		msgType: msgType,
-		length:  length,
+		msgType:         msgType,
+		length:          length,
+		OriginalPayload: payload,
 	}
 
 }

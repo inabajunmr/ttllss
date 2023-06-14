@@ -72,7 +72,7 @@ func main() {
 	remain, shRecord := record.DecodeTLSPlainText(buf[:count])
 	// TODO buf[:count] にまとめて返されるメッセージも全部入ってるので、DecodeTLSPlainText で残りの bytes を返してあげて引き続きデコードを進める必要がある
 	// Google の場合 ChangeCipherSpec が返ってきてその後暗号化された Certificate とかが返ってくる
-	shHandShake := handshake.DecodeHandShake(shRecord.Fragment())
+	_, shHandShake := handshake.DecodeHandShake(shRecord.Fragment())
 	serverPubX, serverPubY := elliptic.Unmarshal(elliptic.P256(), shHandShake.ServerHello.GetKeyShareExtenson().KeyExchange)
 	keys.SetServerPublicKey(serverPubX, serverPubY)
 
