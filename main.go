@@ -3,10 +3,8 @@ package main
 import (
 	"crypto/aes"
 	"crypto/cipher"
-	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
-	"encoding/binary"
 	"fmt"
 	"log"
 	"net"
@@ -14,8 +12,11 @@ import (
 	"github.com/inabajunmr/ttllss/tls/handshake"
 	"github.com/inabajunmr/ttllss/tls/key"
 	"github.com/inabajunmr/ttllss/tls/record"
+	"golang.org/x/crypto/curve25519"
 )
 
+// TODO key パッケージを使って書き直していく
+// TODO key パッケージ、アルゴリズムの採用範囲が狭いので注意
 func main() {
 
 	// prepare ClientHello
@@ -25,25 +26,35 @@ func main() {
 		[]handshake.ProtocolVersion{0x0304},
 	)
 
-	supportedGroupsExtension := handshake.NewSupportedGroupsExtention([]handshake.NamedGroup{handshake.Secp256r1})
+	supportedGroupsExtension := handshake.NewSupportedGroupsExtention([]handshake.NamedGroup{handshake.X25519})
 
 	keys := key.ClientKeys{}
 
 	var clientShares []handshake.KeyShareEntry
-	curve := elliptic.P256()
-	keys.SetCurve(curve)
-	privKey, err := ecdsa.GenerateKey(curve, rand.Reader)
+
+	privateKeyA := make([]byte, 32)
+	_, err := rand.Read(privateKeyA)
 	if err != nil {
-		panic(err)
+		fmt.Println("プライベートキーの生成に失敗しました:", err)
+		return
 	}
-	keys.SetClientPrivateKey(*privKey)
-	pubKey := privKey.PublicKey
-	keyShareBytes := elliptic.Marshal(curve, pubKey.X, pubKey.Y)
-	clientShares = append(clientShares, handshake.NewKeyShareEntry(handshake.Secp256r1, keyShareBytes))
+
+	publicKeyA := make([]byte, 32)
+	pub := (*[32]byte)(publicKeyA)
+	pri := (*[32]byte)(privateKeyA)
+	curve25519.ScalarBaseMult(pub, pri)
+
+	fmt.Printf("\n■■■■■\npub %+x pri %+x\n", pub, pri)
+
+	keys.SetCurve(elliptic.P256())
+
+	keys.SetClientPrivateKey(privateKeyA)
+
+	clientShares = append(clientShares, handshake.NewKeyShareEntry(handshake.X25519, publicKeyA))
 	keyShareExtension := handshake.NewKeyShareClientHello(clientShares)
 
 	ch := handshake.NewClientHello(cipherSuites, []handshake.Extension{supportedVersionsExtension, supportedGroupsExtension, keyShareExtension})
-	hsch := handshake.NewHandshakeClientHello(1, ch)
+	hsch := handshake.NewHandshakeClientHello(handshake.ClientHelloHandshakeType, ch)
 
 	re := record.NewTLSPlainText(record.HandShake, hsch.Encode())
 	printBytes(re.Encode())
@@ -73,98 +84,28 @@ func main() {
 	// TODO buf[:count] にまとめて返されるメッセージも全部入ってるので、DecodeTLSPlainText で残りの bytes を返してあげて引き続きデコードを進める必要がある
 	// Google の場合 ChangeCipherSpec が返ってきてその後暗号化された Certificate とかが返ってくる
 	_, shHandShake := handshake.DecodeHandShake(shRecord.Fragment())
-	serverPubX, serverPubY := elliptic.Unmarshal(elliptic.P256(), shHandShake.ServerHello.GetKeyShareExtenson().KeyExchange)
-	keys.SetServerPublicKey(serverPubX, serverPubY)
+	keys.SetServerPublicKey(shHandShake.ServerHello.GetKeyShareExtenson().KeyExchange)
 
-	fmt.Println("--- SERVER RESPONSE START ---")
-	printBytes(buf[:count])
-	fmt.Println("--- SERVER RESPONSE END ---")
+	// Change Cipher spec が邪魔？
 
-	fmt.Println("--- DERIVE SERVER HANDSHAKE TRAFFIC SECRET START ---")
-	serverHandshakeTrafficSecret := keys.GetServerHandshakeTrafficSecret(hsch.Encode(), shRecord.Fragment())
-	fmt.Println("serverHandshakeTrafficSecret")
-	printBytes(serverHandshakeTrafficSecret)
-	fmt.Println("serverHandshakeTrafficSecret")
-	fmt.Println("--- DERIVE SERVER HANDSHAKE TRAFFIC SECRET END ---")
+	fmt.Println("====== Change Cihper Spec ======")
+	var ccRecord record.TLSCiphertext
+	remain, ccRecord = record.DecodeTLSCiphertext(remain)
+	fmt.Printf("%+v\n", ccRecord)
 
-	fmt.Println("====== CHANGE CIPHER SPEC ======")
+	fmt.Println("======== Encrypted =========")
+	var ccRecord2 record.TLSCiphertext
+	remain, ccRecord2 = record.DecodeTLSCiphertext(remain)
+	fmt.Printf("%+v\n", ccRecord2)
 
-	// TODO 本来は DecodeTLSPlainText でループして type で処理を分ける
+	fmt.Println("======== re =========") // あってそう
+	printBytes(re.Fragment())
+	fmt.Println("======== sh =========") // あってそう
+	printBytes(shRecord.Fragment())
 
-	var ccRecord record.TLSPlainText
-	remain, ccRecord = record.DecodeTLSPlainText(remain)
-	if ccRecord.ContentType == record.ChangeChipherSpec {
-		fmt.Println("Skip change cipher spec.")
-	}
+	// TODO 鍵交換がうまくいっていない気がする
+	decrypted := keys.DecryptTLSCiphertext(ccRecord2.EncryptedRecord, re.Fragment(), shRecord.Fragment())
 
-	fmt.Println("====== CERTIFICATE ======")
-	var certificateRecord record.TLSCiphertext
-	printBytes(remain)
-	remain, certificateRecord = record.DecodeTLSCiphertext(remain)
-	// ここまではあってる
-	printBytes(certificateRecord.EncryptedRecord)
-
-	// AEAD で復号
-	// AdditionalData
-	var additionalData []byte
-	{
-		additionalData = certificateRecord.AdditionalData()
-	}
-
-	ivLength := 12
-
-	// Nonce
-	var nonce []byte
-	{
-		// https://zenn.dev/0a24/articles/tls1_3-rfc8448
-		// シーケンス番号は このタイミングで 0 でいいのか？（CipherText の送信が1つ目？
-		// the first record transmitted under a particular traffic key MUST use sequence number 0.
-		// https://datatracker.ietf.org/doc/html/rfc5116#section-5.3
-		var secNumber uint64
-		secNumber = 0
-		// https://datatracker.ietf.org/doc/html/rfc5116#section-5.3
-		// 1.  The 64-bit record sequence number is encoded in network byte
-		// order and padded to the left with zeros to iv_length.
-		seqNumBytes := make([]byte, 8)
-		binary.BigEndian.PutUint64(seqNumBytes, secNumber)
-		paddedSeqNumBytes := make([]byte, ivLength)
-		copy(paddedSeqNumBytes[ivLength-len(seqNumBytes):], seqNumBytes)
-
-		// 2.  The padded sequence number is XORed with either the static
-		// client_write_iv or server_write_iv (depending on the role).
-		// XOR the padded sequence number with the appropriate write IV
-		// writeIV の計算 https://datatracker.ietf.org/doc/html/rfc8446#section-7.3
-		// [sender]_write_iv  = HKDF-Expand-Label(Secret, "iv", "", iv_length)
-		serverWriteIV := key.HkdfExpandLabel(serverHandshakeTrafficSecret, []byte("iv"), []byte(""), uint16(ivLength))
-
-		for i := 0; i < ivLength; i++ {
-			paddedSeqNumBytes[i] ^= serverWriteIV[i]
-		}
-
-		nonce = paddedSeqNumBytes
-	}
-
-	// serverWriteKey
-	// https://datatracker.ietf.org/doc/html/rfc5116#section-5.1
-	// K_LEN is 16 octets,
-	kLength := 16
-	serverWriteKey := key.HkdfExpandLabel(serverHandshakeTrafficSecret, []byte("key"), []byte(""), uint16(kLength))
-	fmt.Println("serverWriteKey")
-	printBytes(serverWriteKey)
-	fmt.Println("serverWriteKey")
-
-	// AEAD Decrypt
-	// https://datatracker.ietf.org/doc/html/rfc8446#section-5.2
-	// plaintext of encrypted_record =
-	//      AEAD-Decrypt(peer_write_key, nonce,
-	// 			 additional_data, AEADEncrypted)
-	decrypted, err := decrypt(certificateRecord.EncryptedRecord, nonce, additionalData, serverWriteKey)
-	if err != nil {
-		// TODO 認証で落ちてる
-		// いろいろ適当なのでHKDF周りのテストから書いてく
-		log.Fatal(err)
-
-	}
 	printBytes(decrypted)
 
 }
