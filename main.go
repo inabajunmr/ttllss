@@ -71,12 +71,14 @@ func main() {
 		log.Fatal(err)
 	}
 
-	buf := make([]byte, 2048)
+	buf := make([]byte, 4096)
 	count, err := conn.Read(buf)
 	if err != nil {
 		log.Fatal(err)
 	}
 	fmt.Println(string(buf[:count]))
+	fmt.Println("====== COUNT ======")
+	fmt.Println(count)
 
 	fmt.Println("====== SERVER HELLO ======")
 
@@ -85,12 +87,12 @@ func main() {
 	// Google の場合 ChangeCipherSpec が返ってきてその後暗号化された Certificate とかが返ってくる
 	_, shHandShake := handshake.DecodeHandShake(shRecord.Fragment())
 	keys.SetServerPublicKey(shHandShake.ServerHello.GetKeyShareExtenson().KeyExchange)
-
-	// Change Cipher spec が邪魔？
+	fmt.Println("====== SERVER KEY EXCHANGE ======")
+	printBytes(shHandShake.ServerHello.GetKeyShareExtenson().KeyExchange)
 
 	fmt.Println("====== Change Cihper Spec ======")
-	var ccRecord record.TLSCiphertext
-	remain, ccRecord = record.DecodeTLSCiphertext(remain)
+	var ccRecord record.TLSPlainText
+	remain, ccRecord = record.DecodeTLSPlainText(remain)
 	fmt.Printf("%+v\n", ccRecord)
 
 	fmt.Println("======== Encrypted =========")
@@ -98,15 +100,26 @@ func main() {
 	remain, ccRecord2 = record.DecodeTLSCiphertext(remain)
 	fmt.Printf("%+v\n", ccRecord2)
 
-	fmt.Println("======== re =========") // あってそう
-	printBytes(re.Fragment())
-	fmt.Println("======== sh =========") // あってそう
-	printBytes(shRecord.Fragment())
+	decrypted := keys.DecryptTLSCiphertext(ccRecord2, re.Fragment(), shRecord.Fragment())
 
-	// TODO 鍵交換がうまくいっていない気がする
-	decrypted := keys.DecryptTLSCiphertext(ccRecord2.EncryptedRecord, re.Fragment(), shRecord.Fragment())
+	fmt.Println("======== DECRYPTED! =========")
 
+	// TODO decrypted の中に certificate までしか入ってないように見える
 	printBytes(decrypted)
+
+	remain, encryptedExtension := handshake.DecodeHandShake(decrypted)
+	fmt.Printf("===== encryptedExtension ===== \n %+v\n", encryptedExtension)
+	remain, certificate := handshake.DecodeHandShake(remain)
+	fmt.Printf("===== certificate ===== \n %+v\n", certificate)
+	fmt.Println("ORIGINSA")
+	printBytes(certificate.OriginalPayload)
+	// TODO そもそも certificateVerify って常に来るんだっけ
+	// TODO 実物みて確認したい
+	remain, certificateVerify := handshake.DecodeHandShake(remain)
+	fmt.Printf("===== certificateVerify ===== \n %+v\n", certificateVerify)
+	_, finished := handshake.DecodeHandShake(remain)
+
+	printBytes(finished.Finished.VerifyData)
 
 }
 

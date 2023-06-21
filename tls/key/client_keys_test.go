@@ -47,7 +47,7 @@ func Test(t *testing.T) {
 	fmt.Printf("certificateRecord.EncryptedRecord: %x\n", certificateRecord.EncryptedRecord)
 
 	// AEAD Decrypt
-	decrypted := keys.DecryptTLSCiphertext(certificateRecord.EncryptedRecord, clientHello, serverHello)
+	decrypted := keys.DecryptTLSCiphertext(certificateRecord, clientHello, serverHello)
 	fmt.Println("decrypted")
 	printBytes(decrypted)
 	remain, encryptedExtension := handshake.DecodeHandShake(decrypted)
